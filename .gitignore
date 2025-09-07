@@ -1,5 +1,6 @@
 # secret kyeys and files
 *.key
+KEYS/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
