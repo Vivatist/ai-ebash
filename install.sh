@@ -9,13 +9,9 @@ fi
 
 echo "✅ Установка ai..."
 
-# === Устанавливаем зависимости ===
+# === Устанавливаем системные зависимости ===
 apt update
-apt install -y python3 python3-pip git
-
-# === Устанавливаем Python-зависимости ===
-pip3 install --upgrade pip
-pip3 install requests
+apt install -y python3 python3-venv git
 
 # === Копируем проект в /opt/ai-bash ===
 INSTALL_DIR="/opt/ai-bash"
@@ -25,10 +21,15 @@ if [ -d "$INSTALL_DIR" ]; then
 fi
 git clone https://github.com/Vivatist/ai-bash.git "$INSTALL_DIR"
 
+# === Создаём виртуальное окружение и устанавливаем Python-зависимости ===
+python3 -m venv "$INSTALL_DIR/venv"
+"$INSTALL_DIR/venv/bin/pip" install --upgrade pip
+"$INSTALL_DIR/venv/bin/pip" install requests
+
 # === Делаем обёртку ai в /usr/local/bin ===
-cat > /usr/local/bin/ai <<'EOF'
+cat > /usr/local/bin/ai <<EOF
 #!/usr/bin/env bash
-python3 /opt/ai-bash/ai.py "$@"
+"$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/ai.py" "\$@"
 EOF
 
 chmod +x /usr/local/bin/ai
