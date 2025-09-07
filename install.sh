@@ -3,30 +3,51 @@ set -e
 
 # === Проверка root ===
 if [[ $EUID -ne 0 ]]; then
-   echo "❌ Запустите установку через sudo"
+   echo "Запустите установку через sudo"
    exit 1
 fi
 
-echo "✅ Установка ai..."
+echo "Установка/обновление ai..."
 
-# === Устанавливаем системные зависимости ===
-apt update
-apt install -y python3 python3-venv git
+# === Проверка системных зависимостей ===
+for cmd in python3 git; do
+    if ! command -v $cmd &>/dev/null; then
+        echo "Устанавливаем $cmd..."
+        apt update
+        apt install -y $cmd
+    fi
+done
 
-# === Копируем проект в /opt/ai-bash ===
+# === Директория установки ===
 INSTALL_DIR="/opt/ai-bash"
+
 if [ -d "$INSTALL_DIR" ]; then
-    echo "⚠️ Папка $INSTALL_DIR уже существует, удаляем..."
-    rm -rf "$INSTALL_DIR"
+    echo "Папка $INSTALL_DIR уже существует. Обновляем проект..."
+    cd "$INSTALL_DIR"
+    git reset --hard
+    git pull
+else
+    git clone https://github.com/Vivatist/ai-bash.git "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
 fi
-git clone https://github.com/Vivatist/ai-bash.git "$INSTALL_DIR"
 
-# === Создаём виртуальное окружение и устанавливаем Python-зависимости ===
-python3 -m venv "$INSTALL_DIR/venv"
+# === Виртуальное окружение ===
+if [ ! -d "$INSTALL_DIR/venv" ]; then
+    echo "Создаём виртуальное окружение..."
+    python3 -m venv "$INSTALL_DIR/venv"
+fi
+
+# === Обновляем pip и зависимости ===
 "$INSTALL_DIR/venv/bin/pip" install --upgrade pip
-"$INSTALL_DIR/venv/bin/pip" install requests
 
-# === Делаем обёртку ai в /usr/local/bin ===
+# Если есть requirements.txt, ставим зависимости
+if [ -f "$INSTALL_DIR/requirements.txt" ]; then
+    "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+else
+    "$INSTALL_DIR/venv/bin/pip" install requests
+fi
+
+# === Создаём обёртку ai в /usr/local/bin ===
 cat > /usr/local/bin/ai <<EOF
 #!/usr/bin/env bash
 "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/ai.py" "\$@"
@@ -34,5 +55,10 @@ EOF
 
 chmod +x /usr/local/bin/ai
 
-echo "🎉 Установка завершена!"
-echo "Теперь можно запускать: ai 'ваш запрос' из любой директории"
+# === Завершение ===
+echo "Установка / обновление завершено."
+echo "Теперь вы можете запускать команду ai из любой директории:"
+echo "   ai 'ваш запрос к ИИ'"
+echo ""
+echo "Если команда не найдена, перезапустите терминал или выполните:"
+echo "   source ~/.bashrc  # или аналогично для вашей оболочки"
