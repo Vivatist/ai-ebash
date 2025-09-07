@@ -3,7 +3,7 @@ set -e
 
 echo "✅ Установка ai через pipx..."
 
-# Проверка sudo для apt install
+# Проверка root
 if [[ $EUID -ne 0 ]]; then
    echo "❌ Запустите установку через sudo"
    exit 1
@@ -16,18 +16,17 @@ apt install -y python3 python3-venv python3-pip pipx git
 # === Убедимся, что pipx добавлен в PATH ===
 pipx ensurepath
 
-# === Проверяем PATH пользователя и добавляем ~/.local/bin, если нужно ===
+# === Проверяем ~/.local/bin в PATH через .profile ===
 LOCAL_BIN="$HOME/.local/bin"
-SHELL_RC="$HOME/.bashrc"
-if [ -n "$ZSH_VERSION" ]; then
-    SHELL_RC="$HOME/.zshrc"
-fi
+PROFILE_FILE="$HOME/.profile"
 
-if [[ ":$PATH:" != *":$LOCAL_BIN:"* ]]; then
-    echo "⚠ ~/.local/bin не в PATH, добавляем..."
-    echo "export PATH=\"$LOCAL_BIN:\$PATH\"" >> "$SHELL_RC"
+if ! grep -q "$LOCAL_BIN" "$PROFILE_FILE" 2>/dev/null; then
+    echo "⚠ Добавляем $LOCAL_BIN в PATH через $PROFILE_FILE..."
+    echo "" >> "$PROFILE_FILE"
+    echo "# Добавляем pipx и локальные бинарники в PATH" >> "$PROFILE_FILE"
+    echo "export PATH=\"$LOCAL_BIN:\$PATH\"" >> "$PROFILE_FILE"
     export PATH="$LOCAL_BIN:$PATH"
-    echo "✅ PATH обновлён. Перезапустите терминал, если команда ai не найдётся."
+    echo "✅ PATH обновлён. Перезапустите терминал для полной активации."
 fi
 
 # === Клонируем проект в /opt/ai-bash ===
