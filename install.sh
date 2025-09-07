@@ -1,37 +1,31 @@
 #!/usr/bin/env bash
 set -e
 
-# === Проверка root ===
+echo "✅ Установка ai через pipx..."
+
+# === Проверка sudo ===
 if [[ $EUID -ne 0 ]]; then
    echo "❌ Запустите установку через sudo"
    exit 1
 fi
 
-echo "✅ Установка ai..."
-
-# === Устанавливаем зависимости ===
+# === Устанавливаем зависимости системы ===
 apt update
-apt install -y python3 python3-pip git
+apt install -y python3 python3-venv python3-pip pipx git
 
-# === Устанавливаем Python-зависимости ===
-pip3 install requests
+# Убедимся, что pipx добавлен в PATH
+pipx ensurepath
 
-# === Копируем проект в /opt/ai-bash ===
-INSTALL_DIR="/opt/ai-bash"
-if [ -d "$INSTALL_DIR" ]; then
-    rm -rf "$INSTALL_DIR"
+# === Устанавливаем проект через pipx ===
+# Если уже установлен — обновляем
+if pipx list | grep -q ai-bash; then
+    echo "🔄 Обновление ai-bash через pipx..."
+    pipx upgrade git+https://github.com/Vivatist/ai-bash.git
+else
+    echo "📦 Установка ai-bash через pipx..."
+    pipx install git+https://github.com/Vivatist/ai-bash.git
 fi
-git clone https://github.com/Vivatist/ai-bash.git "$INSTALL_DIR"
-
-# === Делаем обёртку ai в /usr/local/bin ===
-cat > /usr/local/bin/ai <<'EOF'
-#!/usr/bin/env bash
-python3 /opt/ai-bash/ai.py "$@"
-EOF
-
-chmod +x /usr/local/bin/ai
 
 echo "🎉 Установка завершена!"
 echo "Теперь можно запускать: ai 'ваш запрос'"
-echo "Или: ai -run 'ваш запрос' для запуска в интерактивном режиме"
-echo "Пример: ai -run 'Напиши скрипт на bash, который выводит список файлов в текущей директории'"
+echo "Пример: ai 'Напиши скрипт на bash для резервного копирования файлов'"
