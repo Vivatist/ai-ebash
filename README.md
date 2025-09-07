@@ -1,32 +1,41 @@
-## Установка
+# Ai-bash!
+Console utility for integrating artificial intelligence into a Linux terminal. Allows you to ask an AI question and execute the scripts and commands suggested by the AI in the terminal. It will be useful for novice Linux administrators. 
+  
+The project is in the pre-alpha stage. In case of problems with the installation or operation of the Ai-bash utility, please contact me.
+
+## Setup
 
 ```bash
-# Клонируем репозиторий
+# Cloning the repository
 git clone https://github.com/Vivatist/ai-bash.git
 
-# Делаем инсталлятор исполняемым
+# Making the installer executable
 cd ai-bash
 chmod +x install.sh
 
-# Запускаем установку с правами root
+# Running the installation with root rights
 sudo ./install.sh
 ```
 
 
 
-### Запуск
-Если при первом запуске после установки выдало ошибку - перезапустите терминал
+### Run
+If an error occurs on the first startup after installation, restart the terminal.
 ```bash
-ai [-run] Ваш запрос
+ai [-run] Your request to the AI
 ```
 
-### Пример
+### Example
 ```bash
-ai [-run] Напиши скрипт на bash, который выводит список файлов в текущей директории
+ai Write a script in bash that outputs a list of files in the current directory.
+```
+or
+```bash
+ai -run Write a script in bash that outputs a list of files in the current directory.
 ```
 
-## Удаление
-Команды выполнять в директории пакета, который скачали при инсталляции (ai-bash/)
+## Remove
+Execute commands in the directory of the package that was downloaded during installation (ai-bash/)
 ```bash
 chmod +x uninstall.sh
 sudo ./uninstall.sh
