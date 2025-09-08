@@ -1,3 +1,7 @@
+
+copilot-instructions.md
+.vscode/
+
 # secret kyeys and files
 *.key
 KEYS/
