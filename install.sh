@@ -38,10 +38,10 @@ if [ ! -d "$INSTALL_DIR/venv" ]; then
     python3 -m venv "$INSTALL_DIR/venv"
 fi
 
-# === Обновляем pip и устанавливаем зависимости из source/requirements.txt ===
+# === Обновляем pip и устанавливаем зависимости из requirements.txt ===
 "$INSTALL_DIR/venv/bin/pip" install --upgrade pip
 
-REQ_FILE="$INSTALL_DIR/source/requirements.txt"
+REQ_FILE="$INSTALL_DIR/requirements.txt"
 
 if [ -f "$REQ_FILE" ]; then
     echo "Устанавливаем зависимости из $REQ_FILE..."
