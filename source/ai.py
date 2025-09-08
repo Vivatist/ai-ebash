@@ -8,6 +8,8 @@ import sys
 import json
 import subprocess
 import requests
+from rich.console import Console
+from rich.markdown import Markdown
 
 from settings import API_URL, MODEL, CONTEXT, DEBUG
 from formatter_text import format_answer
@@ -66,7 +68,8 @@ def main():
             # format_answer разбивает текст на отформатированную часть
             # и список найденных блоков кода
             formatted, code_blocks = format_answer(answer)
-            print(formatted)
+            console = Console()
+            console.print(Markdown(answer))
 
             # Если включён режим выполнения и есть блоки кода — предлагаем выбрать
             if run_mode and code_blocks:
