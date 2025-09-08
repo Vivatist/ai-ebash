@@ -1,3 +1,4 @@
+# ...existing code...
 #!/usr/bin/env bash
 set -e
 
@@ -37,20 +38,23 @@ if [ ! -d "$INSTALL_DIR/venv" ]; then
     python3 -m venv "$INSTALL_DIR/venv"
 fi
 
-# === Обновляем pip и зависимости ===
+# === Обновляем pip и устанавливаем зависимости из source/requirements.txt ===
 "$INSTALL_DIR/venv/bin/pip" install --upgrade pip
 
-# Если есть requirements.txt, ставим зависимости
-if [ -f "$INSTALL_DIR/requirements.txt" ]; then
-    "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+REQ_FILE="$INSTALL_DIR/source/requirements.txt"
+
+if [ -f "$REQ_FILE" ]; then
+    echo "Устанавливаем зависимости из $REQ_FILE..."
+    "$INSTALL_DIR/venv/bin/pip" install -r "$REQ_FILE"
 else
-    "$INSTALL_DIR/venv/bin/pip" install requests
+    echo "Файл source/requirements.txt не найден в $INSTALL_DIR. Создайте файл с зависимостями."
+    exit 1
 fi
 
-# === Создаём обёртку ai в /usr/local/bin ===
+# === Создаём обёртку ai в /usr/local/bin (точка входа в source/) ===
 cat > /usr/local/bin/ai <<EOF
 #!/usr/bin/env bash
-"$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/ai.py" "\$@"
+"$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/source/ai.py" "\$@"
 EOF
 
 chmod +x /usr/local/bin/ai
@@ -62,3 +66,4 @@ echo "   ai 'ваш запрос к ИИ'"
 echo ""
 echo "Если команда не найдена, перезапустите терминал или выполните:"
 echo "   source ~/.bashrc  # или аналогично для вашей оболочки"
+# ...existing code...
