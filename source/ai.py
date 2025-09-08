@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 import sys
-import subprocess
 from rich.console import Console
 from rich.markdown import Markdown
-from rich.progress import Progress
 import threading
 import time
 from rich.console import Console
-from rich.spinner import Spinner
-from time import sleep
+from rich.rule import Rule
 
 from settings import CONTEXT, DEBUG
 from formatter_text import annotate_bash_blocks
-from api_client import send_prompt  # <- новый интерфейс
+from api_client import send_prompt
+from block_runner import run_code_selection  # добавлен импорт
 
 # Флаг для остановки потока (заменён на Event)
 import threading
@@ -42,8 +40,6 @@ def main():
     # Собираем текст запроса из оставшихся аргументов
     prompt = " ".join(args)
 
-
-
     try:
         # Запуск прогресс-бара в отдельном потоке
         progress_thread = threading.Thread(target=run_progress)
@@ -69,29 +65,17 @@ def main():
         # Если включён режим выполнения и есть блоки кода — предлагаем выбрать
         if run_mode and code_blocks:
             console.print(Markdown(annotated_answer))
-            try:
-                while True:
-                    choice = console.input("[blue]\nВведите номер блока кода для запуска (0 — выход): [/blue]").strip()
-                    if choice.lower() in ("0", "q", "exit"):
-                        print("Выход.")
-                        break
-                    if not choice.isdigit():
-                        print("Введите число или 0 для выхода.")
-                        continue
-                    idx = int(choice)
-                    if idx < 1 or idx > len(code_blocks):
-                        print(f"Неверный номер: у вас {len(code_blocks)} блоков. Попробуйте снова.")
-                        continue
-                    console.print(f"\n>>> Выполняем блок #{choice}:\n{code_blocks[idx - 1]}\n", style="blue")
-                    subprocess.run(code_blocks[idx - 1], shell=True)
-            except (EOFError, KeyboardInterrupt):
-                print("\nВыход.")
+            console.print(Rule("Конец ответа", style="green"))
+            run_code_selection(console, code_blocks)
         else:
-            console.print(Markdown(annotated_answer))
+            console.print(Markdown(answer))
+            console.print(Rule("Конец ответа", style="green"))
 
     except Exception as e:
         # Прочие ошибки (сеть, JSON, и т.д.)
         print("Ошибка:", e)
+
+
 
 if __name__ == "__main__":
     main()

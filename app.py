@@ -1,68 +1,87 @@
-#!/usr/bin/env python3
-import sys
-import re
-from pathlib import Path
 from rich.console import Console
-from rich.markdown import Markdown
+from rich.syntax import Syntax
 
-def annotate_bash_blocks(md_text):
-    """
-    Находит fenced code blocks с языком bash, собирает их содержимое в список
-    и добавляет над каждым блоком строку-метку вида "**Блок кода bash [#{counter}]**".
-    Возвращает (annotated_md, list_of_code_strings).
-    """
-    code_blocks = []
-    counter = 0
+console = Console()
 
-    pattern = re.compile(r"```bash[^\n]*\n(.*?)```", re.DOTALL | re.IGNORECASE)
+# --- Python ---
+python_code = """
+def greet(name):
+    print(f"Hello, {name}!")
 
-    def repl(m):
-        nonlocal counter
-        counter += 1
-        code = m.group(1).rstrip("\n")
-        code_blocks.append(code)
-        label = f"\n**Блок кода bash [#{counter}]**\n"
-        return label + "```bash\n" + code + "\n```"
+greet("Alice")
+"""
+syntax_python = Syntax(python_code, "python", theme="monokai", line_numbers=True)
+console.print("[bold underline]Python код[/bold underline]")
+console.print(syntax_python)
 
-    annotated = pattern.sub(repl, md_text)
-    return annotated, code_blocks
+# --- JavaScript ---
+js_code = """
+function greet(name) {
+    console.log(`Hello, ${name}!`);
+}
+greet("Bob");
+"""
+syntax_js = Syntax(js_code, "javascript", theme="monokai", line_numbers=True)
+console.print("\n[bold underline]JavaScript код[/bold underline]")
+console.print(syntax_js)
 
-def main():
-    console = Console()
-    # Путь к файлу можно передать как аргумент, по умолчанию ./text.md
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("text.md")
-    if not path.exists():
-        console.print(f"[red]Файл не найден:[/red] {path}")
-        sys.exit(1)
+# --- HTML ---
+html_code = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test</title>
+</head>
+<body>
+    <h1>Hello World</h1>
+</body>
+</html>
+"""
+syntax_html = Syntax(html_code, "html", theme="monokai", line_numbers=True)
+console.print("\n[bold underline]HTML код[/bold underline]")
+console.print(syntax_html)
 
-    md_text = path.read_text(encoding="utf-8")
-    annotated_md, blocks = annotate_bash_blocks(md_text)
+# --- SQL ---
+sql_code = """
+SELECT id, name
+FROM users
+WHERE age > 18
+ORDER BY name;
+"""
+syntax_sql = Syntax(sql_code, "sql", theme="monokai", line_numbers=True)
+console.print("\n[bold underline]SQL код[/bold underline]")
+console.print(syntax_sql)
 
-    # Рендерим форматированный Markdown через rich
-    console.print(Markdown(annotated_md))
+from rich.console import Console
+from rich.panel import Panel
+from rich.rule import Rule
 
-    # Интерактивный цикл: ожидание номера блока и вывод его сырого содержимого
-    if not blocks:
-        print("\n(Блоки bash не найдены)")
-        return
+console = Console()
 
-    try:
-        while True:
-            choice = input("\nВведите номер блока для просмотра (0 — выход): ").strip()
-            if choice.lower() in ("0", "q", "exit"):
-                print("Выход.")
-                break
-            if not choice.isdigit():
-                print("Введите число или 0 для выхода.")
-                continue
-            idx = int(choice)
-            if idx < 1 or idx > len(blocks):
-                print(f"Неверный номер: у вас {len(blocks)} блоков. Попробуйте снова.")
-                continue
-            print(f"\n--- Блок #{idx} (сырое содержимое) ---")
-            print(blocks[idx - 1])
-    except (EOFError, KeyboardInterrupt):
-        print("\nВыход.")
+# ---------------------------
+# 1. Panel – простой блок
+console.print(Panel("Это обычный блок с текстом"))
 
-if __name__ == "__main__":
-    main()
+# 2. Panel с заголовком и стилем
+console.print(Panel("Важное сообщение", title="Заголовок", style="bold cyan"))
+
+# 3. Panel с многострочным текстом
+console.print(Panel("""Это многострочный блок.
+Можно писать несколько строк,
+и Rich корректно их отформатирует.""", title="Многострочный"))
+
+# ---------------------------
+# 4. Rule – горизонтальная линия с текстом
+console.print(Rule("Разделитель"))
+
+# 5. Rule с выравниванием текста
+console.print(Rule("Центрированный текст", align="center"))
+
+# 6. Rule с кастомным стилем
+console.print(Rule("Важная секция", style="bold magenta"))
+
+# ---------------------------
+# 7. Использование Panels и Rule вместе
+console.print(Rule("Начало секции", style="green"))
+console.print(Panel("Содержимое секции внутри блока", style="yellow"))
+console.print(Rule("Конец секции", style="red"))
