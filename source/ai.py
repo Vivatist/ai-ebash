@@ -1,31 +1,36 @@
 #!/usr/bin/env python3
-"""
-ai.py — маленький CLI-клиент к API ИИ.
-Запускается как: ai [-run] ваш запрос к ИИ
-Опция -run позволяет выполнить предлагаемые код-блоки из ответа.
-"""
 import sys
-import json
 import subprocess
-import requests
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.progress import Progress
+import threading
+import time
+from rich.console import Console
+from rich.spinner import Spinner
+from time import sleep
 
-from settings import API_URL, MODEL, CONTEXT, DEBUG
-from formatter_text import format_answer
+from settings import CONTEXT, DEBUG
+from formatter_text import annotate_bash_blocks
+from api_client import send_prompt  # <- новый интерфейс
 
+# Флаг для остановки потока (заменён на Event)
+import threading
+stop_event = threading.Event()
+
+def run_progress():
+    console = Console()
+    with console.status("[bold green]Ai печатает...[/bold green]", spinner="dots") as status:
+         while not stop_event.is_set():
+            time.sleep(0.1)
 
 def main():
-    """Главная функция: парсит аргументы, формирует запрос к API и выводит ответ.
-    
-    Логика:
-    - если нет аргументов — печатаем подсказку по использованию и выходим;
-    - поддерживается флаг -run для интерактивного выполнения блоков кода
-      из ответа ассистента.
-    """
+    # Если нет аргументов, выводим подсказку по использованию
     if len(sys.argv) < 2:
         print("Использование: ai [-run] ваш запрос к ИИ без кавычек")
         sys.exit(0)
+
+    console = Console()
 
     # Проверяем ключ -run
     run_mode = False
@@ -37,71 +42,53 @@ def main():
     # Собираем текст запроса из оставшихся аргументов
     prompt = " ".join(args)
 
-    # Подготавливаем полезную нагрузку для API (стандартный формат chat-completions)
-    payload = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": CONTEXT},
-            {"role": "user", "content": prompt},
-        ],
-    }
 
-    # Заголовки запроса
-    headers = {"Content-Type": "application/json"}
 
     try:
-        # Отправляем POST-запрос к API
-        response = requests.post(API_URL, headers=headers, data=json.dumps(payload))
-        response.raise_for_status()
-        data = response.json()
+        # Запуск прогресс-бара в отдельном потоке
+        progress_thread = threading.Thread(target=run_progress)
+        progress_thread.start()
 
-        # Ожидаем формат ответа с choices -> message -> content
-        if "choices" in data and len(data["choices"]) > 0:
-            answer = data["choices"][0]["message"]["content"]
+        # Получаем ответ от API через новый интерфейс
+        answer = send_prompt(prompt, system_context=CONTEXT)
 
-            # В режиме DEBUG выводим исходную (неформатированную) версию ответа
-            if DEBUG:
-                print("=== RAW RESPONSE ===")
-                print(answer)
-                print("=== /RAW RESPONSE ===\n")
+        # Сигнализируем потоку прогресса остановиться
+        stop_event.set()
+        progress_thread.join()  # Ждём завершения потока
 
-            # format_answer разбивает текст на отформатированную часть
-            # и список найденных блоков кода
-            formatted, code_blocks = format_answer(answer)
-            console = Console()
-            console.print(Markdown(answer))
+        # В режиме DEBUG выводим исходную (неформатированную) версию ответа
+        if DEBUG:
+            print("=== RAW RESPONSE (from send_prompt) ===")
+            print(answer)
+            print("=== /RAW RESPONSE ===\n")
 
-            # Если включён режим выполнения и есть блоки кода — предлагаем выбрать
-            if run_mode and code_blocks:
+        # Размечаем bash-блоки и получаем список кодов
+        annotated_answer, code_blocks = annotate_bash_blocks(answer)
+        
+
+        # Если включён режим выполнения и есть блоки кода — предлагаем выбрать
+        if run_mode and code_blocks:
+            console.print(Markdown(annotated_answer))
+            try:
                 while True:
-                    try:
-                        choice = input("\nВведите номер блока для выполнения (0 - выход): ")
-                        if not choice.isdigit():
-                            print("Введите число.")
-                            continue
-                        choice = int(choice)
-                        if choice == 0:
-                            print("Выход.")
-                            break
-                        if 1 <= choice <= len(code_blocks):
-                            code = code_blocks[choice - 1]
-                            print(f"\n>>> Выполняем блок #{choice}:\n{code}\n")
-                            # Выполняем выбранный блок в shell. Внимание: риск выполнения
-                            # произвольного кода — используется на свой страх и риск.
-                            subprocess.run(code, shell=True)
-                        else:
-                            print("Нет такого блока.")
-                    except KeyboardInterrupt:
-                        print("\nВыход.")
+                    choice = console.input("[blue]\nВведите номер блока кода для запуска (0 — выход): [/blue]").strip()
+                    if choice.lower() in ("0", "q", "exit"):
+                        print("Выход.")
                         break
-
+                    if not choice.isdigit():
+                        print("Введите число или 0 для выхода.")
+                        continue
+                    idx = int(choice)
+                    if idx < 1 or idx > len(code_blocks):
+                        print(f"Неверный номер: у вас {len(code_blocks)} блоков. Попробуйте снова.")
+                        continue
+                    console.print(f"\n>>> Выполняем блок #{choice}:\n{code_blocks[idx - 1]}\n", style="blue")
+                    subprocess.run(code_blocks[idx - 1], shell=True)
+            except (EOFError, KeyboardInterrupt):
+                print("\nВыход.")
         else:
-            # Непредвиденный формат ответа — выводим для отладки
-            print("Ошибка: неожиданный формат ответа:", data)
+            console.print(Markdown(annotated_answer))
 
-    except requests.exceptions.HTTPError as e:
-        # Ошибки уровня HTTP (4xx/5xx)
-        print("HTTP ошибка:", e)
     except Exception as e:
         # Прочие ошибки (сеть, JSON, и т.д.)
         print("Ошибка:", e)
