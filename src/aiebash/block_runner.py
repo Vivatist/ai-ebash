@@ -1,30 +1,25 @@
-#!/usr/bin/env python3
-import subprocess
-from rich.console import Console
-from rich.markdown import Markdown
 
+from aiebash.script_executor import run_bash_block
+from rich.console import Console
 
 def run_code_selection(console: Console, code_blocks: list):
     """
-    Интерактивный цикл: спрашивает номер блока, выводит его содержимое и при выборе выполняет его.
-    Завершается при вводе 0, q, exit или при Ctrl+C / EOF.
+    Интерактивный выбор и запуск bash-блоков.
+    Вводите номер блока для выполнения, 0/q/exit — выход.
     """
-    try:
-        while True:
-            choice = console.input("[blue]\nВведите номер блока кода для запуска (0 — выход): [/blue]").strip()
+    while True:
+        try:
+            choice = console.input("[blue]\nВведите номер блока для запуска (0 — выход): [/blue]").strip()
             if choice.lower() in ("0", "q", "exit"):
-                console.print("Выход.")
                 break
             if not choice.isdigit():
-                console.print("[red]Введите число или 0 для выхода.[/red]")
+                console.print("[yellow]Введите номер блока или 0 для выхода.[/yellow]")
                 continue
             idx = int(choice)
-            if idx < 1 or idx > len(code_blocks):
-                console.print(f"[red]Неверный номер: у вас {len(code_blocks)} блоков. Попробуйте снова.[/red]")
+            if not (1 <= idx <= len(code_blocks)):
+                console.print(f"[yellow]Нет такого блока. Всего: {len(code_blocks)}.[/yellow]")
                 continue
-            console.print(f"\n>>> Выполняем блок #{idx}:\n", style="blue")
-            console.print(code_blocks[idx - 1])
-            # Выполнение — риск: выполняется произвольный код из ответа ИИ
-            subprocess.run(code_blocks[idx - 1], shell=True)
-    except (EOFError, KeyboardInterrupt):
-        console.print("\nВыход.")
+            run_bash_block(console, code_blocks, idx)
+        except (EOFError, KeyboardInterrupt):
+            console.print("\n")
+            break
