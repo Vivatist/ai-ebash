@@ -6,44 +6,33 @@ api_client — небольшой интерфейс для отправки cha
 import json
 import requests
 import typing as t
-import settings
-
-API_URL = getattr(settings, "API_URL", "")
-DEFAULT_MODEL = getattr(settings, "MODEL", None)
-API_KEY = getattr(settings, "API_KEY", None)
-DEBUG = getattr(settings, "DEBUG", False)
 
 
-def send_chat_request(messages: t.List[dict], model: t.Optional[str] = None, timeout: int = 60) -> dict:
+def send_chat_request(messages: t.List[dict], model , api_url, api_key = None, timeout: int = 60) -> dict:
     """
     Отправляет chat-style запрос (messages) к API и возвращает распарсенный JSON-ответ.
     messages — список словарей вида {"role": "user|system|assistant", "content": "..."}.
     """
-    if not API_URL:
-        raise RuntimeError("API_URL не задан в settings.py")
+    if not api_url:
+        raise RuntimeError("API_URL не задан в config.ini")
 
     payload = {
-        "model": model or DEFAULT_MODEL,
+        "model": model,
         "messages": messages,
     }
 
     headers = {"Content-Type": "application/json"}
-    if API_KEY:
-        headers["Authorization"] = f"Bearer {API_KEY}"
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
 
-    resp = requests.post(API_URL, headers=headers, data=json.dumps(payload), timeout=timeout)
+    resp = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=timeout)
     resp.raise_for_status()
     data = resp.json()
-
-    if DEBUG:
-        print("=== RAW API RESPONSE ===")
-        print(json.dumps(data, ensure_ascii=False, indent=2))
-        print("=== /RAW API RESPONSE ===\n")
 
     return data
 
 
-def send_prompt(prompt: str, system_context: str = "", model: t.Optional[str] = None, timeout: int = 60) -> str:
+def send_prompt(prompt: str, model, api_url,api_key = None, system_context: str = "", timeout: int = 30) -> str:
     """
     Удобная обёртка: формирует messages из system_context + user prompt,
     отправляет запрос и возвращает текст ответа ассистента.
@@ -53,7 +42,7 @@ def send_prompt(prompt: str, system_context: str = "", model: t.Optional[str] = 
         messages.append({"role": "system", "content": system_context})
     messages.append({"role": "user", "content": prompt})
 
-    data = send_chat_request(messages, model=model, timeout=timeout)
+    data = send_chat_request(messages, model, api_url=api_url, api_key=api_key, timeout=timeout)
     # ожидаемый формат: choices -> [ { message: { content: "..." } } ]
     if "choices" in data and data["choices"]:
         return data["choices"][0]["message"]["content"]
