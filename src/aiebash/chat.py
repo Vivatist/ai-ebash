@@ -1,13 +1,9 @@
 
 # --- Top-level imports ---
 from typing import List, Dict, Optional
-import threading
 from rich.console import Console
 from rich.markdown import Markdown
-from rich.rule import Rule
-from aiebash.error_handling import handle_connection_error
 from aiebash.formatter_text import annotate_bash_blocks
-from aiebash.progress import run_progress
 from aiebash.script_executor import run_bash_block
 
 def _render_answer(console: Console, answer: str, run_mode: bool) -> List[str]:
@@ -33,18 +29,12 @@ def chat_loop(console: Console, llm_client, context: str, run_mode: bool, first_
     if context:
         messages.append({"role": "system", "content": context})
 
-    stop_event = threading.Event()
     code_blocks: List[str] = []
 
     # Первый вопрос
     if first_prompt:
         messages.append({"role": "user", "content": first_prompt})
-        stop_event.clear()
-        progress_thread = threading.Thread(target=run_progress, args=(stop_event,))
-        progress_thread.start()
         answer: str = llm_client.send_chat(messages)
-        stop_event.set()
-        progress_thread.join()
         messages.append({"role": "assistant", "content": answer})
         code_blocks = _render_answer(console, answer, run_mode)
 
@@ -67,22 +57,13 @@ def chat_loop(console: Console, llm_client, context: str, run_mode: bool, first_
 
             # Обычное сообщение пользователя
             messages.append({"role": "user", "content": user_input})
-            stop_event.clear()
-            progress_thread = threading.Thread(target=run_progress, args=(stop_event,))
-            progress_thread.start()
             try:
                 answer = llm_client.send_chat(messages)
             except Exception as e:
-                stop_event.set()
-                progress_thread.join()
-                handle_connection_error(e)
-            stop_event.set()
-            progress_thread.join()
+                pass
             messages.append({"role": "assistant", "content": answer})
             code_blocks = _render_answer(console, answer, run_mode)
 
         except KeyboardInterrupt:
-            stop_event.set()
-            progress_thread.join()
             console.print("\n")
             break

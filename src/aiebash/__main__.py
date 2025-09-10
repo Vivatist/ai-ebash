@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
 import sys
-import threading
 from pathlib import Path
-from typing import List, Dict
 
 from rich.console import Console
 from rich.markdown import Markdown
-from rich.rule import Rule
 
 # Добавляем parent (src) в sys.path для локального запуска
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from aiebash.error_handling import handle_connection_error
 from aiebash.llm_factory import create_llm_client
 from aiebash.formatter_text import annotate_bash_blocks
 from aiebash.block_runner import run_code_selection
 from aiebash.settings import settings
 from aiebash.cli import parse_args
-from aiebash.progress import run_progress
 from aiebash.chat import chat_loop
 
 
@@ -41,10 +36,6 @@ llm_client = create_llm_client(
 )
 
 
-stop_event = threading.Event()
-
-
-
 # === Основная логика ===
 def main() -> None:
     args = parse_args()
@@ -61,19 +52,11 @@ def main() -> None:
             if not prompt:
                 console.print("[yellow]Ошибка: требуется ввести запрос или использовать -c[/yellow]")
                 sys.exit(1)
-
-            stop_event.clear()
-            progress_thread = threading.Thread(target=run_progress, args=(stop_event,))
-            progress_thread.start()
             try:
                 answer: str = llm_client.send_prompt(prompt, system_context=CONTEXT)
             except Exception as e:
-                stop_event.set()
-                progress_thread.join()
                 return
-            stop_event.set()
-            progress_thread.join()
-
+            
             if DEBUG:
                 print("=== RAW RESPONSE ===")
                 print(answer)
@@ -86,13 +69,10 @@ def main() -> None:
                 run_code_selection(console, code_blocks)
             else:
                 console.print(Markdown(answer))
+    except KeyboardInterrupt:
+        sys.exit(130)
 
-            # убрана горизонтальная линия
-    
-    except Exception as e:
-        stop_event.set()
-        progress_thread.join()
-        #handle_connection_error(e)
+
 
 
 if __name__ == "__main__":
