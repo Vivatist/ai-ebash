@@ -1,0 +1,6 @@
+# llm_interface.py
+from typing import List, Protocol
+
+class LLMClient(Protocol):
+    def send_chat(self, messages: List[dict]) -> str: ...
+    def send_prompt(self, prompt: str, system_context: str = "") -> str: ...
