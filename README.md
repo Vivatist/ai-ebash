@@ -14,26 +14,37 @@ The project is in the pre-alpha stage. In case of problems with the installation
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.11+
 
-## Installation Ubuntu/Debian
+## Installation
+
+### PyPi (pipx) Package (Debian/Ubuntu)
 
 1. Install pipx (if not already installed):
-   ```bash
-   sudo apt update
-   sudo apt install pipx python3-venv -y
-   pipx ensurepath
-   ```
+```bash
+sudo apt update
+sudo apt install pipx python3-venv -y
+pipx ensurepath
+```
 
 2. Restart the terminal or update the PATH:
-   ```bash
-   source ~/.bashrc
-   ```
+```bash
+source ~/.bashrc
+```
 
 3. Install ai-ebash:
-   ```bash
-   pipx install ai-ebash
-   ```
+```bash
+pipx install ai-ebash
+```
+
+### DEB Package (Debian/Ubuntu)
+1. Download the latest DEB package from [GitHub Releases](https://github.com/Vivatist/ai-ebash/releases)
+2. Install the package:
+```bash
+sudo dpkg -i ai-ebash_*.deb
+# If there are dependency issues, run:
+sudo apt-get install -f
+```
 
 ### Example
 ```bash
@@ -43,11 +54,27 @@ or
 ```bash
 ai -run Hello AI! Write example script.
 ```
-## Removal
+## Uninstall
 
 To completely remove the utility:
+
+### If installed via pipx:
 ```bash
 pipx uninstall ai-ebash
+```
+
+### If installed via DEB package:
+```bash
+sudo apt remove ai-ebash
+# Or for complete deletion, including configuration files:
+sudo apt purge ai-ebash
+```
+
+### You can also use dpkg.:
+```bash
+sudo dpkg -r ai-ebash
+# Or for complete deletion, including configuration files:
+sudo dpkg -P ai-ebash
 ```
 
 ## Security
