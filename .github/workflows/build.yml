@@ -49,8 +49,13 @@ jobs:
         run: |
           pip install --upgrade stdeb
           python setup.py --command-packages=stdeb.command sdist_dsc
-          # Заменяем debian/rules на современный вариант
-          find deb_dist -name rules -exec sh -c "echo '#!/usr/bin/make -f' > {} && echo '%:' >> {} && echo -e '\tdh \$@ --with python3 --buildsystem=pybuild' >> {} && chmod +x {}" \;
+          
+          # Заменяем debian/rules с использованием табуляции (а не пробелов!)
+          echo '#!/usr/bin/make -f' > deb_dist/ai-ebash-*/debian/rules
+          echo '%:' >> deb_dist/ai-ebash-*/debian/rules
+          echo -e '\tdh $@ --with python3 --buildsystem=pybuild' >> deb_dist/ai-ebash-*/debian/rules
+          chmod +x deb_dist/ai-ebash-*/debian/rules
+          
           cd deb_dist/ai-ebash-*
           dpkg-buildpackage -us -uc -b
           cd ../..
