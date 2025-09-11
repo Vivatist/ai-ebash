@@ -1,9 +1,12 @@
-Package: ai-ebash
-Version: 0.1.1
+Source: ai-ebash
 Section: utils
 Priority: optional
+Maintainer: Andrey Bochkarev <andrey.bch.1976@gmail.com>
+Build-Depends: debhelper (>= 9), dh-python, python3-all
+Standards-Version: 4.5.0
+
+Package: ai-ebash
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends}
-Maintainer: Andrey Bochkarev <andrey.bch.1976@gmail.com>
-Description: Console utility for integrating artificial intelligence into a Linux terminal. 
+Description: Console utility for integrating artificial intelligence into a Linux terminal.
  A simple CLI wrapper for AI written in Python.
