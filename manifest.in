@@ -1,0 +1,17 @@
+include src/aiebash/default_config.ini
+
+# Exclude CI and packaging for other distros
+prune .github
+prune debian
+
+# Exclude tests from source distribution
+prune src/aiebash/tests
+
+# Remove caches and compiled files
+global-exclude __pycache__/*
+global-exclude *.py[cod]
+
+# Misc not needed in sdist
+exclude .gitignore
+# requirements are specified in setup.cfg install_requires
+exclude requirements.txt

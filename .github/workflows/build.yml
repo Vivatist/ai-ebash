@@ -1,0 +1,83 @@
+# ---
+# name: Publish Python Package
+
+# on:
+#   push:
+#     branches:
+#       - main
+#     tags:
+#       - 'v*.*.*'  # Публикуем только по тегам версии
+
+# jobs:
+#   build-and-publish:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       #- name: Checkout code
+#       #  uses: actions/checkout@v3
+
+#       # 1️⃣ Получаем код
+#       - uses: actions/checkout@v4
+#         with:
+#            fetch-depth: 0  # Нужно для setuptools-scm и версий
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.12'
+
+#       - name: Install build tools
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install setuptools wheel setuptools-scm twine build
+
+#       - name: Build package
+#         run: python -m build
+
+#       - name: Publish to GitHub Packages
+#         env:
+#           TWINE_USERNAME: __token__
+#           TWINE_PASSWORD: ${{ secrets.GH_PACKAGES_TOKEN }}
+#         run: |
+#           python -m twine upload \
+#             --repository-url https://upload.pkg.github.com/Vivatist \
+#             dist/*
+
+
+
+name: Build and Publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine setuptools wheel setuptools-scm
+
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
