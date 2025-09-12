@@ -1,5 +1,5 @@
 
-from aiebash.script_executor import run_bash_block
+from aiebash.script_executor import run_code_block
 from rich.console import Console
 
 def run_code_selection(console: Console, code_blocks: list):
@@ -19,7 +19,7 @@ def run_code_selection(console: Console, code_blocks: list):
             if not (1 <= idx <= len(code_blocks)):
                 console.print(f"[yellow]Нет такого блока. Всего: {len(code_blocks)}.[/yellow]")
                 continue
-            run_bash_block(console, code_blocks, idx)
+            run_code_block(console, code_blocks, idx)
         except (EOFError, KeyboardInterrupt):
             console.print("\n")
             break

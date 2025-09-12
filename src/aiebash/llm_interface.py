@@ -47,7 +47,7 @@ class LLMClient:
             stop_event.set()
             progress_thread.join()
         return result
-
+    
     def _send_chat(self, messages: List[dict]) -> str:
         """
         Реализация отправки запроса к LLM. Переопределяется в наследнике.

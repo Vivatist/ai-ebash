@@ -9,7 +9,7 @@ from rich.markdown import Markdown
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from aiebash.llm_factory import create_llm_client
-from aiebash.formatter_text import annotate_bash_blocks
+from aiebash.formatter_text import annotate_code_blocks
 from aiebash.block_runner import run_code_selection
 from aiebash.settings import settings
 from aiebash.cli import parse_args
@@ -62,7 +62,7 @@ def main() -> None:
                 print(answer)
                 print("=== /RAW RESPONSE ===")
             
-            annotated_answer, code_blocks = annotate_bash_blocks(answer)
+            annotated_answer, code_blocks = annotate_code_blocks(answer)
 
             if run_mode and code_blocks:
                 console.print(Markdown(annotated_answer))
