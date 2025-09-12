@@ -19,11 +19,10 @@ class LLMClient:
         Пока stop_event не установлен, показывает "Аи печатает...".
         """
         console = Console()
-        with console.status("[bold green]Ai печатает...[/bold green]", spinner="dots"):
+        with console.status("[dim]Ai печатает...[/dim]", spinner="dots"):
             while not stop_event.is_set():
                 time.sleep(0.1)
-            # пытаемся очистить строку (безуспешно)
-            sys.stdout.write('\r' + ' ' * (20) + '\r')
+
         
 
 

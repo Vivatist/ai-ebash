@@ -21,5 +21,5 @@ def run_code_selection(console: Console, code_blocks: list):
                 continue
             run_code_block(console, code_blocks, idx)
         except (EOFError, KeyboardInterrupt):
-            console.print("\n")
+            #console.print("\n")
             break

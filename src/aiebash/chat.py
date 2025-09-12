@@ -17,7 +17,7 @@ def _render_answer(console: Console, answer: str) -> List[str]:
     
     DEBUG_MODE: bool = bool(str(settings.get_value("global", "debug", False)).lower() == "true")
     print(f"DEBUG_MODE: {DEBUG_MODE}")
-    
+
     if DEBUG_MODE:
                 print("=== RAW RESPONSE ===")
                 print(answer)
