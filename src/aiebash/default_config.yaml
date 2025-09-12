@@ -1,0 +1,14 @@
+global:
+  context: "Ты профессиональный системный администратор, помощник по Linux. Пользователь - новичок в Linux, помоги ему. Система Ubuntu, оболочка $SHELL. При ответе учитывай, что пользователь работает в терминале Bash. Отвечай всегда на русском языке. Ты разговариваешь с пользователем в терминале."
+  debug: false
+  backend: openai_over_proxy
+
+connections:
+  openai_over_proxy:
+    model: gpt-4o-mini
+    api_url: https://openai-proxy.andrey-bch-1976.workers.dev/v1/chat/completions
+    api_key: ""
+  openai:
+    model: gpt-4o-mini
+    api_url: https://api.openai.com/v1/chat/completions
+    api_key: YOUR_API_KEY_HERE

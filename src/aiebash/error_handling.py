@@ -15,7 +15,7 @@ def handle_connection_error(error: Exception):
         if hasattr(error, 'response') and error.response is not None:
             status_code = error.response.status_code
             if status_code == 403:
-                console.print("[yellow]Ошибка 403: Доступ запрещён (Forbidden). Проверьте API ключ или права доступа.[/yellow]")
+                console.print("[yellow]Ошибка 403: Доступ запрещён\nВозможные причины:\n-Превышен лимит запросов (попробуйте через некоторое время)\n-Не поддерживается ваш регион (используйте VPN)\n-Ваш API-ключ перестал действовоать[/yellow]")
             elif status_code == 404:
                 console.print("[yellow]Ошибка 404: Ресурс не найден.[/yellow]")
             else:
