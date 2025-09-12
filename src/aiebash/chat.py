@@ -11,13 +11,9 @@ def _render_answer(console: Console, answer: str, run_mode: bool) -> List[str]:
     Возвращает список bash-блоков (только при run_mode=True), иначе пустой список.
     """
     console.print("[bold blue]AI:[/bold blue]")
-    if run_mode:
-        annotated_answer, code_blocks = annotate_code_blocks(answer)
-        console.print(Markdown(annotated_answer))
-        return code_blocks
-    else:
-        console.print(Markdown(answer))
-        return []
+    annotated_answer, code_blocks = annotate_code_blocks(answer)
+    console.print(Markdown(annotated_answer))
+    return code_blocks
 
 def chat_loop(console: Console, llm_client, context: str, run_mode: bool, first_prompt: Optional[str]) -> None:
     """Простой чат с ИИ.
@@ -41,13 +37,19 @@ def chat_loop(console: Console, llm_client, context: str, run_mode: bool, first_
     # Основной цикл
     while True:
         try:
+            # Ввод пользователя
+            # Вывод подсказки в зависимости от наличия блоков кода
+            if len(code_blocks) > 0:
+                console.print("[dim]Введите следующий вопрос или номер блока кода для немедленного выполнения[/dim]")
+            else:
+                console.print("[dim]Введите следующий вопрос[/dim]")
             user_input: str = console.input("[bold green]Вы:[/bold green] ")
             stripped = user_input.strip()
             if stripped.lower() in ("exit", "quit", "выход"):
                 break
 
             # Если режим запуска включен и введено число — попытка запуска блока
-            if run_mode and stripped.isdigit():
+            if stripped.isdigit():
                 idx = int(stripped)
                 if 1 <= idx <= len(code_blocks):
                     run_code_block(console, code_blocks, idx)

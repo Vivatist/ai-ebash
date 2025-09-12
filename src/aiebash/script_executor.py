@@ -60,7 +60,7 @@ class WindowsCommandExecutor(CommandExecutor):
                 shell=True,
                 capture_output=True,
                 text=True,
-                encoding='cp866'  # Кириллическая кодировка для консоли Windows
+                encoding='cp1251'  # Кириллическая кодировка для консоли Windows
             )
             return result
         finally:

@@ -12,7 +12,7 @@ from aiebash.llm_factory import create_llm_client
 from aiebash.formatter_text import annotate_code_blocks
 from aiebash.block_runner import run_code_selection
 from aiebash.settings import settings
-from aiebash.cli import parse_args
+from aiebash.arguments import parse_args
 from aiebash.chat import chat_loop
 
 
@@ -38,11 +38,10 @@ llm_client = create_llm_client(
 
 # === Основная логика ===
 def main() -> None:
-    args = parse_args()
     console = Console()
 
-    run_mode: bool = args.run
-    chat_mode: bool = args.chat
+    args = parse_args()
+    chat_mode: bool = args.dialog
     prompt: str = " ".join(args.prompt)
 
     try:

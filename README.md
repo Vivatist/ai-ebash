@@ -80,6 +80,11 @@ sudo apt remove ai-ebash
 sudo apt purge ai-ebash
 ```
 
+### If installed via Windows:
+```bash
+apt uninstall ai-ebash
+```
+
 ### You can also use dpkg.:
 ```bash
 sudo dpkg -r ai-ebash
