@@ -6,7 +6,7 @@ from rich.markdown import Markdown
 from aiebash.formatter_text import annotate_code_blocks
 from aiebash.script_executor import run_code_block
 
-def _render_answer(console: Console, answer: str, run_mode: bool) -> List[str]:
+def _render_answer(console: Console, answer: str) -> List[str]:
     """Отрисовать ответ AI. При run_mode=True нумеруем bash-блоки, иначе просто показываем текст.
     Возвращает список bash-блоков (только при run_mode=True), иначе пустой список.
     """
@@ -15,12 +15,7 @@ def _render_answer(console: Console, answer: str, run_mode: bool) -> List[str]:
     console.print(Markdown(annotated_answer))
     return code_blocks
 
-def chat_loop(console: Console, llm_client, context: str, run_mode: bool, first_prompt: Optional[str]) -> None:
-    """Простой чат с ИИ.
-    - run_mode=False: просто переписка, блоки не нумеруются, запуск не возможен.
-    - run_mode=True: блоки нумеруются; если вводится число N, выполняется блок N;
-      при неверном номере выводится предупреждение; далее снова ожидается ввод.
-    """
+def chat_loop(console: Console, llm_client, context: str, first_prompt: Optional[str]) -> None:
     messages: List[Dict[str, str]] = []
     if context:
         messages.append({"role": "system", "content": context})
@@ -32,7 +27,7 @@ def chat_loop(console: Console, llm_client, context: str, run_mode: bool, first_
         messages.append({"role": "user", "content": first_prompt})
         answer: str = llm_client.send_chat(messages)
         messages.append({"role": "assistant", "content": answer})
-        code_blocks = _render_answer(console, answer, run_mode)
+        code_blocks = _render_answer(console, answer)
 
     # Основной цикл
     while True:
@@ -64,7 +59,7 @@ def chat_loop(console: Console, llm_client, context: str, run_mode: bool, first_
             except Exception as e:
                 pass
             messages.append({"role": "assistant", "content": answer})
-            code_blocks = _render_answer(console, answer, run_mode)
+            code_blocks = _render_answer(console, answer)
 
         except KeyboardInterrupt:
             console.print("\n")

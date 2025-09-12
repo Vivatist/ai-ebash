@@ -9,8 +9,6 @@ from rich.markdown import Markdown
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from aiebash.llm_factory import create_llm_client
-from aiebash.formatter_text import annotate_code_blocks
-from aiebash.block_runner import run_code_selection
 from aiebash.settings import settings
 from aiebash.arguments import parse_args
 from aiebash.chat import chat_loop
@@ -46,7 +44,7 @@ def main() -> None:
 
     try:
         if chat_mode:
-            chat_loop(console, llm_client, CONTEXT, run_mode, prompt or None)
+            chat_loop(console, llm_client, CONTEXT, prompt or None)
         else:
             if not prompt:
                 console.print("[yellow]Ошибка: требуется ввести запрос или использовать -c[/yellow]")
@@ -61,13 +59,8 @@ def main() -> None:
                 print(answer)
                 print("=== /RAW RESPONSE ===")
             
-            annotated_answer, code_blocks = annotate_code_blocks(answer)
+            console.print(Markdown(answer))
 
-            if run_mode and code_blocks:
-                console.print(Markdown(annotated_answer))
-                run_code_selection(console, code_blocks)
-            else:
-                console.print(Markdown(answer))
     except KeyboardInterrupt:
         sys.exit(130)
 

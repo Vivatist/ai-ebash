@@ -62,7 +62,7 @@ ai Hello AI! Write example script.
 ```
 or
 ```bash
-ai -run Hello AI! Write example script.
+ai -d Hello AI! Write example script.
 ```
 ## Uninstall
 
