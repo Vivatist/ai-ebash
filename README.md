@@ -7,10 +7,10 @@ The project is in the pre-alpha stage. In case of problems with the installation
 ## Features
 
 - Send chat-style prompts to an LLM (configurable model and endpoint).
-- Parse Markdown responses and highlight/number fenced `bash` code blocks.
+- Parse Markdown responses and highlight/number fenced `code` blocks.
 - Interactive selection and (optional) execution of code blocks.
 - Rich console output via `rich`.
-- Configurable via `config.toml`.
+- Configurable via `config.yaml`.
 
 ## Requirements
 
