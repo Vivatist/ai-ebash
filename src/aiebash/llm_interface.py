@@ -4,6 +4,7 @@ import threading
 from rich.console import Console
 import threading
 import time
+import sys
 
 from aiebash.error_handling import handle_connection_error
 
@@ -18,14 +19,12 @@ class LLMClient:
         Пока stop_event не установлен, показывает "Аи печатает...".
         """
         console = Console()
-        try:
-            with console.status("[bold green]Ai печатает...[/bold green]", spinner="dots"):
-                while not stop_event.is_set():
-                    time.sleep(0.1)
-        except KeyboardInterrupt:
-            stop_event.set()
-            console.print("\n[red]Сатаус бар прервана пользователем (Ctrl+C)[/red]")
-            raise
+        with console.status("[bold green]Ai печатает...[/bold green]", spinner="dots"):
+            while not stop_event.is_set():
+                time.sleep(0.1)
+            # пытаемся очистить строку (безуспешно)
+            sys.stdout.write('\r' + ' ' * (20) + '\r')
+        
 
 
     def send_chat(self, messages: List[dict]) -> str:
@@ -47,7 +46,7 @@ class LLMClient:
             stop_event.set()
             progress_thread.join()
         return result
-    
+
     def _send_chat(self, messages: List[dict]) -> str:
         """
         Реализация отправки запроса к LLM. Переопределяется в наследнике.

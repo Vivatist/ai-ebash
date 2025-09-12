@@ -5,6 +5,8 @@ from rich.console import Console
 from rich.markdown import Markdown
 from aiebash.formatter_text import annotate_code_blocks
 from aiebash.script_executor import run_code_block
+from aiebash.settings import settings
+
 
 def _render_answer(console: Console, answer: str) -> List[str]:
     """Отрисовать ответ AI. При run_mode=True нумеруем bash-блоки, иначе просто показываем текст.
@@ -12,6 +14,14 @@ def _render_answer(console: Console, answer: str) -> List[str]:
     """
     console.print("[bold blue]AI:[/bold blue]")
     annotated_answer, code_blocks = annotate_code_blocks(answer)
+    
+    DEBUG_MODE: bool = bool(str(settings.get_value("global", "debug", False)).lower() == "true")
+    print(f"DEBUG_MODE: {DEBUG_MODE}")
+    
+    if DEBUG_MODE:
+                print("=== RAW RESPONSE ===")
+                print(answer)
+                print("=== /RAW RESPONSE ===")
     console.print(Markdown(annotated_answer))
     return code_blocks
 

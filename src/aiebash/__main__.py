@@ -15,7 +15,6 @@ from aiebash.chat import chat_loop
 
 
 # === Считываем глобальные настройки ===
-DEBUG_MODE: bool   = settings.get_value("global", "debug", False)
 CONTEXT: str  = settings.get_value("global", "context", "")
 BACKEND: str  = settings.get_value("global", "backend", "openai_over_proxy")
 
@@ -53,11 +52,6 @@ def main() -> None:
                 answer: str = llm_client.send_prompt(prompt, system_context=CONTEXT)
             except Exception as e:
                 return
-            
-            if DEBUG_MODE:
-                print("=== RAW RESPONSE ===")
-                print(answer)
-                print("=== /RAW RESPONSE ===")
             
             console.print(Markdown(answer))
 
