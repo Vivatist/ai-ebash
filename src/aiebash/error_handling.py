@@ -7,7 +7,6 @@ def handle_connection_error(error: Exception):
     """
     Обрабатывает типовые ошибки интернет соединения и выводит их в консоль.
     """
-    console.print("\r")
     if isinstance(error, requests.exceptions.ConnectionError):
         console.print("[dim]Ошибка соединения: не удалось подключиться к серверу. Проверьте интернет.[/dim]")
     elif isinstance(error, requests.exceptions.Timeout):

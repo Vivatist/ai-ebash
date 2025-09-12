@@ -20,7 +20,6 @@ class OpenAIClientOverProxy(LLMClient):
         try:
             resp = requests.post(self.api_url, headers=headers, json=payload, timeout=self.timeout)
         except: 
-            self.stop_event
             raise
         resp.raise_for_status()
         data = resp.json()

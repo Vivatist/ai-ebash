@@ -14,13 +14,13 @@ class LLMClient:
     def __init__(self, timeout: int = 60):
         self.timeout = timeout
 
-    def run_progress(self, stop_event: threading.Event) -> None:
+    def run_progress(self, stop_spinner: threading.Event) -> None:
         """Визуальный индикатор работы ИИ с точечным спиннером.
         Пока stop_event не установлен, показывает "Аи печатает...".
         """
         console = Console()
-        with console.status("[dim]Ai печатает...[/dim]", spinner="dots"):
-            while not stop_event.is_set():
+        with console.status("[dim]Ai печатает...[/dim]", spinner="dots", spinner_style="dim"):
+            while not stop_spinner.is_set():
                 time.sleep(0.1)
 
         
@@ -31,19 +31,33 @@ class LLMClient:
         Отправляет сообщения в LLM, отображает прогресс-бар.
         Должен быть переопределён в наследнике.
         """
-        stop_event = threading.Event()
-        progress_thread = threading.Thread(target=self.run_progress, args=(stop_event,))
+        stop_spinner = threading.Event()
+        progress_thread = threading.Thread(target=self.run_progress, args=(stop_spinner,), daemon=True)
         progress_thread.start()
+        
+        result = None
+        error = None
+        
         try:
             result = self._send_chat(messages)
         except KeyboardInterrupt:
             raise
         except Exception as e:
-            handle_connection_error(e)
-            raise
+            # Сохраняем ошибку, но НЕ обрабатываем её здесь
+            error = e
         finally:
-            stop_event.set()
-            progress_thread.join()
+            # 1. Останавливаем поток индикатора
+            stop_spinner.set()
+            # 2. Ждем завершения потока индикатора
+            progress_thread.join(timeout=1.0)
+            # 3. Небольшая пауза для гарантированного обновления консоли
+            time.sleep(0.1)
+        
+        # 4. Только ПОСЛЕ полной очистки индикатора обрабатываем ошибку
+        if error:
+            handle_connection_error(error)
+            raise error
+            
         return result
 
     def _send_chat(self, messages: List[dict]) -> str:
