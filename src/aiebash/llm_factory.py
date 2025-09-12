@@ -7,8 +7,8 @@ def create_llm_client(backend: str, model: str, api_url: str, api_key: str = Non
     backend = backend.lower().strip()
     if backend == "openai_over_proxy":
         return OpenAIClient(model=model, api_url=api_url, api_key=api_key, timeout=timeout)
-    # elif backend == "huggingface":
-    #     return HuggingFaceClient(...)
+    elif backend == "openai":
+        return OpenAIClient(model=model, api_url=api_url, api_key=api_key, timeout=timeout)
     # elif backend == "ollama":
     #     return OllamaClient(...)
     else:

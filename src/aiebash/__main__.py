@@ -17,14 +17,14 @@ from aiebash.chat import chat_loop
 
 
 # === Считываем глобальные настройки ===
-DEBUG: bool   = settings.get_bool("global", "DEBUG")
-CONTEXT: str  = settings.get("global", "CONTEXT")
-BACKEND: str  = settings.get("global", "BACKEND")
+DEBUG_MODE: bool   = settings.get_value("global", "debug", False)
+CONTEXT: str  = settings.get_value("global", "context", "")
+BACKEND: str  = settings.get_value("global", "backend", "openai_over_proxy")
 
 # Настройки конкретного бэкенда (например, openai_over_proxy)
-MODEL: str    = settings.get(BACKEND, "MODEL")
-API_URL: str  = settings.get(BACKEND, "API_URL")
-API_KEY: str  = settings.get(BACKEND, "API_KEY")
+MODEL = settings.get_value(BACKEND, "model", "")
+API_URL = settings.get_value(BACKEND, "api_url", "")
+API_KEY = settings.get_value(BACKEND, "api_key", "")
 
 
 # === Инициализация клиента ===
@@ -57,7 +57,7 @@ def main() -> None:
             except Exception as e:
                 return
             
-            if DEBUG:
+            if DEBUG_MODE:
                 print("=== RAW RESPONSE ===")
                 print(answer)
                 print("=== /RAW RESPONSE ===")

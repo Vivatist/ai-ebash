@@ -46,6 +46,16 @@ sudo dpkg -i ai-ebash_*.deb
 sudo apt-get install -f
 ```
 
+### Windows (experemental)
+
+1. Install Python v3.11+ (if not already installed):
+
+2. Open CMD or PowerShell and install ai-ebash:
+```bash
+pip install ai-ebash
+```
+3. Restart Windows
+
 ### Example
 ```bash
 ai Hello AI! Write example script.
