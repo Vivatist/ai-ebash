@@ -5,8 +5,11 @@ from rich.console import Console
 import threading
 import time
 import sys
+import json
 
 from aiebash.error_handling import handle_connection_error
+from aiebash.settings import settings
+from aiebash.logger import logger
 
 
 

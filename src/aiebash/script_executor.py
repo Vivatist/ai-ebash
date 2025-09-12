@@ -5,6 +5,9 @@ import os
 from abc import ABC, abstractmethod
 from rich.console import Console
 
+from aiebash.logger import logger
+
+
 # Абстрактный базовый класс для исполнителей команд
 class CommandExecutor(ABC):
     """Базовый интерфейс для исполнителей команд разных ОС"""
@@ -29,13 +32,17 @@ class LinuxCommandExecutor(CommandExecutor):
     
     def execute(self, code_block: str) -> subprocess.CompletedProcess:
         """Выполняет bash-команды в Linux"""
-        return subprocess.run(
+        logger.debug(f"Выполнение bash-команды: {code_block[:80]}...")
+        result = subprocess.run(
             code_block,
             shell=True,
             capture_output=True,
             text=True,
             encoding='utf-8'
         )
+        logger.debug(f"Результат выполнения: код возврата {result.returncode}, "
+                    f"stdout: {len(result.stdout)} байт, stderr: {len(result.stderr)} байт")
+        return result
 
 
 # Исполнитель команд для Windows
@@ -48,13 +55,18 @@ class WindowsCommandExecutor(CommandExecutor):
         code = code_block.replace('@echo off', '')
         code = code.replace('pause', 'rem pause')
         
+        logger.debug(f"Подготовка Windows-команды: {code[:80]}...")
+        
         # Создаем временный .bat файл
         fd, temp_path = tempfile.mkstemp(suffix='.bat')
+        logger.debug(f"Создан временный файл: {temp_path}")
+        
         try:
             with os.fdopen(fd, 'w') as f:
                 f.write(code)
             
             # Запускаем с кодировкой консоли Windows
+            logger.info(f"Выполнение команды из файла {temp_path}")
             result = subprocess.run(
                 [temp_path],
                 shell=True,
@@ -62,13 +74,19 @@ class WindowsCommandExecutor(CommandExecutor):
                 text=True,
                 encoding='cp1251'  # Кириллическая кодировка для консоли Windows
             )
+            logger.debug(f"Результат выполнения: код возврата {result.returncode}, "
+                        f"stdout: {len(result.stdout)} байт, stderr: {len(result.stderr)} байт")
             return result
+        except Exception as e:
+            logger.error(f"Ошибка при выполнении Windows-команды: {e}", exc_info=True)
+            raise
         finally:
             # Всегда удаляем временный файл
             try:
                 os.unlink(temp_path)
-            except:
-                pass
+                logger.debug(f"Временный файл {temp_path} удален")
+            except Exception as e:
+                logger.warning(f"Не удалось удалить временный файл {temp_path}: {e}")
 
 
 # Фабрика для создания исполнителей команд
@@ -83,9 +101,12 @@ class CommandExecutorFactory:
         Returns:
             CommandExecutor: Соответствующий исполнитель для текущей ОС
         """
-        if platform.system().lower() == "windows":
+        system = platform.system().lower()
+        if system == "windows":
+            logger.info("Создание исполнителя команд для Windows")
             return WindowsCommandExecutor()
         else:
+            logger.info(f"Создание исполнителя команд для {system} (используется LinuxCommandExecutor)")
             return LinuxCommandExecutor()
 
 
@@ -98,27 +119,46 @@ def run_code_block(console: Console, code_blocks: list, idx: int) -> None:
         code_blocks (list): Список блоков кода
         idx (int): Индекс выполняемого блока
     """
+    logger.info(f"Запуск блока кода #{idx}")
+    
+    # Проверяем корректность индекса
+    if not (1 <= idx <= len(code_blocks)):
+        logger.warning(f"Некорректный индекс блока: {idx}. Доступно блоков: {len(code_blocks)}")
+        console.print(f"[yellow]Блок #{idx} не существует. Доступны блоки с 1 по {len(code_blocks)}.[/yellow]")
+        return
+    
+    code = code_blocks[idx - 1]
+    logger.debug(f"Содержимое блока #{idx}: {code[:100]}...")
+    
     console.print(f"\n>>> Выполняем блок #{idx}:", style="blue")
-    console.print(code_blocks[idx - 1])
+    console.print(code)
     
     # Получаем исполнитель для текущей ОС
-    executor = CommandExecutorFactory.create_executor()
-    
     try:
+        executor = CommandExecutorFactory.create_executor()
+        
         # Выполняем код через соответствующий исполнитель
-        process = executor.execute(code_blocks[idx - 1])
+        logger.debug("Начало выполнения кода...")
+        process = executor.execute(code)
+        logger.debug("Код успешно выполнен")
         
         # Выводим результаты
         if process.stdout:
+            logger.debug(f"Получен stdout ({len(process.stdout)} символов)")
             console.print(f"[green]>>>:[/green]\n{process.stdout}")
         else:
+            logger.debug("stdout пустой")
             console.print("[green]>>> Нет вывода stdout[/green]")
             
         if process.stderr:
+            logger.warning(f"Получен stderr ({len(process.stderr)} символов): {process.stderr[:200]}")
             console.print(f"[yellow]>>>Error:[/yellow]\n{process.stderr}")
         
         # Добавляем информацию о статусе выполнения
-        console.print(f"[blue]>>> Код завершения: {process.returncode}[/blue]")
+        exit_code = process.returncode
+        logger.info(f"Блок #{idx} выполнен с кодом {exit_code}")
+        console.print(f"[blue]>>> Код завершения: {exit_code}[/blue]")
             
     except Exception as e:
+        logger.error(f"Ошибка выполнения блока #{idx}: {e}", exc_info=True)
         console.print(f"[yellow]Ошибка выполнения скрипта: {e}[/yellow]")
