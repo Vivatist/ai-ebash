@@ -1,4 +1,4 @@
-include src/aiebash/default_config.ini
+include src/aiebash/default_config.json
 
 # Exclude CI and packaging for other distros
 prune .github
