@@ -8,5 +8,5 @@ Pygments==2.19.2
 requests==2.32.5
 rich==14.1.0
 urllib3==2.5.0
-pyyaml==6.0
+pyyaml==6.0.2
 dynaconf==3.2.11
