@@ -138,20 +138,17 @@ def run_code_block(console: Console, code_blocks: list, idx: int) -> None:
         executor = CommandExecutorFactory.create_executor()
         
         # Выполняем код через соответствующий исполнитель
-        logger.debug("Начало выполнения кода...")
+        logger.debug("Начало выполнения блока кода...")
         process = executor.execute(code)
-        logger.debug("Код успешно выполнен")
-        
+                
         # Выводим результаты
         if process.stdout:
             logger.debug(f"Получен stdout ({len(process.stdout)} символов)")
             console.print(f"[green]>>>:[/green]\n{process.stdout}")
         else:
-            logger.debug("stdout пустой")
             console.print("[green]>>> Нет вывода stdout[/green]")
             
         if process.stderr:
-            logger.warning(f"Получен stderr ({len(process.stderr)} символов): {process.stderr[:200]}")
             console.print(f"[yellow]>>>Error:[/yellow]\n{process.stderr}")
         
         # Добавляем информацию о статусе выполнения

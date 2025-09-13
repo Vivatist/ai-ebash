@@ -4,13 +4,9 @@ import threading
 from rich.console import Console
 import threading
 import time
-import sys
-import json
 
 from aiebash.error_handling import handle_connection_error
-from aiebash.config_manager import config_manager
-from aiebash.logger import log_execution_time, logger
-
+from aiebash.logger import log_execution_time
 
 
 class LLMClient:
@@ -76,3 +72,11 @@ class LLMClient:
             messages.append({"role": "system", "content": system_context})
         messages.append({"role": "user", "content": prompt})
         return self.send_chat(messages)
+
+    def configure_llm(self, console: Console) -> dict:
+        """
+        Интерактивная настройка параметров LLM.
+        Возвращает словарь с обновленными настройками.
+        Должен быть переопределён в наследнике.
+        """
+        raise NotImplementedError("Метод configure_llm должен быть реализован в наследнике")

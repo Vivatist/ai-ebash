@@ -16,7 +16,6 @@ def _render_answer(console: Console, answer: str) -> List[str]:
     logger.debug("Аннотирование и форматирование ответа от ИИ...")
     annotated_answer, code_blocks = annotate_code_blocks(answer)
     
-    logger.debug(f"Найдено блоков кода: {len(code_blocks)}")
     logger.debug(f"Текст ИИ в формате Markdown (с учетом аннотаций):\n{annotated_answer}")
 
     console.print(Markdown(annotated_answer))
@@ -50,9 +49,8 @@ def chat_loop(console: Console, llm_client, context: str, first_prompt: Optional
         messages.append({"role": "user", "content": first_prompt})
         
         try:
-            logger.debug("Отправка первого запроса к LLM")
+            logger.debug("Отправка первого запроса диалога")
             answer: str = llm_client.send_chat(messages)
-            logger.debug(f"Получен ответ длиной {len(answer)} символов")
             
             messages.append({"role": "assistant", "content": answer})
             code_blocks = _render_answer(console, answer)
@@ -102,7 +100,6 @@ def chat_loop(console: Console, llm_client, context: str, first_prompt: Optional
             try:
                 logger.debug("Отправка запроса к LLM")
                 answer = llm_client.send_chat(messages)
-                logger.debug(f"Получен ответ длиной {len(answer)} символов")
                 
                 messages.append({"role": "assistant", "content": answer})
                 code_blocks = _render_answer(console, answer)

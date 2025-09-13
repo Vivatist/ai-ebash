@@ -188,7 +188,7 @@ class ConfigManager:
         """Управление списком LLM"""
         while True:
             self.console.print("\n[bold]🔧 Управление LLM:[/bold]")
-            self.console.print("1. Добавить новый LLM")
+            self.console.print("1. Настроить LLM")
             self.console.print("2. Удалить LLM")
             self.console.print("3. Просмотреть все LLM")
             self.console.print("4. Вернуться к настройкам")
@@ -196,7 +196,7 @@ class ConfigManager:
             choice = Prompt.ask("Выберите действие", choices=["1", "2", "3", "4"])
 
             if choice == "1":
-                self._add_llm()
+                self._configure_llm()
             elif choice == "2":
                 self._remove_llm()
             elif choice == "3":
@@ -204,35 +204,66 @@ class ConfigManager:
             elif choice == "4":
                 break
 
-    def _add_llm(self) -> None:
-        """Добавление нового LLM"""
-        self.console.print("\n[bold]➕ Добавление нового LLM:[/bold]")
+    def _configure_llm(self) -> None:
+        """Настройка существующего LLM через интерфейс"""
+        available_llms = self.get_available_llms()
 
-        name = Prompt.ask("Имя LLM").strip()
-        if not name:
-            self.console.print("[red]Имя не может быть пустым[/red]")
+        if not available_llms:
+            self.console.print("[red]❌ Нет доступных LLM для настройки![/red]")
             return
 
-        # Проверяем, существует ли уже
-        if name in self.yaml_config.get("supported_LLMs", {}):
-            self.console.print(f"[red]LLM '{name}' уже существует[/red]")
-            return
+        self.console.print("\n[bold]⚙️  Выберите LLM для настройки:[/bold]")
 
-        model = Prompt.ask("Модель", default="gpt-4o-mini")
-        api_url = Prompt.ask("API URL")
-        api_key = Prompt.ask("API Key", password=True)
+        for i, llm_name in enumerate(available_llms, 1):
+            llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
+            model = llm_config.get("model", "не указана")
+            self.console.print(f"{i}. {llm_name} (модель: {model})")
 
-        new_llm = {
-            "model": model,
-            "api_url": api_url,
-            "api_key": api_key
-        }
+        while True:
+            try:
+                choice = Prompt.ask(f"Выберите LLM для настройки (1-{len(available_llms)})")
+                choice_num = int(choice)
 
-        if "supported_LLMs" not in self.yaml_config:
-            self.yaml_config["supported_LLMs"] = {}
-        self.yaml_config["supported_LLMs"][name] = new_llm
+                if 1 <= choice_num <= len(available_llms):
+                    selected_llm = available_llms[choice_num - 1]
+                    self._configure_specific_llm(selected_llm)
+                    break
+                else:
+                    self.console.print(f"[red]Введите число от 1 до {len(available_llms)}[/red]")
 
-        self.console.print(f"[green]✓ LLM '{name}' добавлен[/green]")
+            except ValueError:
+                self.console.print("[red]Введите корректное число[/red]")
+
+    def _configure_specific_llm(self, llm_name: str) -> None:
+        """Настройка конкретного LLM через его интерфейс"""
+        try:
+            # Получаем текущие настройки LLM
+            llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
+            model = llm_config.get("model", "")
+            api_url = llm_config.get("api_url", "")
+            api_key = llm_config.get("api_key", "")
+
+            # Создаем клиент через фабрику
+            from aiebash.llm_factory import create_llm_client
+            client = create_llm_client(
+                backend=llm_name,
+                model=model,
+                api_url=api_url,
+                api_key=api_key
+            )
+
+            # Вызываем метод настройки через интерфейс
+            updated_config = client.configure_llm(self.console)
+
+            # Сохраняем обновленные настройки
+            if "supported_LLMs" not in self.yaml_config:
+                self.yaml_config["supported_LLMs"] = {}
+            self.yaml_config["supported_LLMs"][llm_name] = updated_config
+
+            self.console.print(f"[green]✓ Настройки для '{llm_name}' обновлены[/green]")
+
+        except Exception as e:
+            self.console.print(f"[red]Ошибка при настройке LLM '{llm_name}': {e}[/red]")
 
     def _remove_llm(self) -> None:
         """Удаление LLM"""
@@ -343,10 +374,10 @@ def get_available_llms() -> List[str]:
     """Функция для обратной совместимости"""
     return config_manager.get_available_llms()
 
-def run_interactive_setup() -> None:
+def run_configuration_dialog() -> None:
     """Запуск интерактивной настройки"""
     config_manager.run_interactive_setup()
 
 
 if __name__ == "__main__":
-    run_interactive_setup()
+    run_configuration_dialog()

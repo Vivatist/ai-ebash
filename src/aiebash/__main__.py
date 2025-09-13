@@ -24,22 +24,25 @@ from aiebash.chat import chat_loop
 
 
 # === Считываем глобальные настройки ===
-logger.debug("Загрузка настроек...")
+logger.info("Загрузка настроек...")
 CONTEXT: str = config_manager.get_value("global", "context", "")
 CURRENT_LLM: str = config_manager.get_value("global", "current_LLM", "openai_over_proxy")
+
+logger.debug(f"Заданы настройки - Системный контекст: {'(пусто)' if not CONTEXT else CONTEXT[:30] + '...'}")
+logger.debug(f"Заданы настройки - Текущий LLM: {CURRENT_LLM}")
 
 # Настройки конкретного LLM (например, openai_over_proxy)
 MODEL = config_manager.get_value("supported_LLMs", CURRENT_LLM, {}).get("model", "")
 API_URL = config_manager.get_value("supported_LLMs", CURRENT_LLM, {}).get("api_url", "")
 API_KEY = config_manager.get_value("supported_LLMs", CURRENT_LLM, {}).get("api_key", "")
 
-logger.info(f"Используемый LLM: {CURRENT_LLM}")
-logger.info(f"Модель: {MODEL}")
-logger.debug(f"API URL: {API_URL}")
+logger.debug(f"Заданы настройки - Модель: {MODEL}")
+logger.debug(f"Заданы настройки - API URL: {API_URL}")
+logger.debug(f"Заданы настройки - API Key: {'(не задан)' if not API_KEY else f'{API_KEY[:5]}...{API_KEY[-5:] if len(API_KEY) > 10 else API_KEY}'}")
 
 
 # === Инициализация клиента ===
-logger.debug("Инициализация LLM клиента...")
+logger.debug("Инициализация LLM клиента %s", CURRENT_LLM)
 try:
     llm_client = create_llm_client(
         backend=CURRENT_LLM,
@@ -47,8 +50,6 @@ try:
         api_url=API_URL,
         api_key=API_KEY,
     )
-    logger.info("Настройки клиента: backend=%s, model=%s", CURRENT_LLM, MODEL,  extra={"api_url": API_URL, "api_key": "****" if API_KEY else None})
-    logger.debug("LLM клиент успешно создан")
 except Exception as e:
     logger.error(f"Ошибка при создании LLM клиента: {e}", exc_info=True)
     sys.exit(1)
@@ -56,25 +57,24 @@ except Exception as e:
 
 # === Основная логика ===
 def main() -> None:
-    logger.info("Запуск ai-ebash")
-    logger.debug("Запуск основного процесса...")
 
     console = Console()
 
     try:
         args = parse_args()
+        logger.info("Разбор аргументов командной строки...")
         logger.debug(f"Полученные аргументы: dialog={args.dialog}, settings={args.settings}, prompt={args.prompt or '(пусто)'}")
         
         # Обработка режима настройки
         if args.settings:
-            logger.info("Запуск интерактивного режима настройки")
+            logger.info("Запуск конфигурационного режима")
             try:
-                from aiebash.config_manager import run_interactive_setup
-                run_interactive_setup()
-                logger.info("Режим настройки завершен")
+                from aiebash.config_manager import run_configuration_dialog
+                run_configuration_dialog()
+                logger.info("Конфигурационный режим завершен")
                 return 0
             except Exception as e:
-                logger.error(f"Ошибка в режиме настройки: {e}", exc_info=True)
+                logger.error(f"Ошибка в режиме конфигурации: {e}", exc_info=True)
                 return 1
         
         chat_mode: bool = args.dialog
@@ -95,9 +95,8 @@ def main() -> None:
                 return 1
                 
             try:
-                logger.debug(f"Отправка запроса: {prompt[:50]}...")
+                logger.debug(f"Отправка запроса: '{prompt[:50]}'...")
                 answer: str = llm_client.send_prompt(prompt, system_context=CONTEXT)
-                logger.debug(f"Получен ответ длиной {len(answer)} символов")
             except Exception as e:
                 return 1
             
@@ -109,7 +108,6 @@ def main() -> None:
         return 130
     except Exception as e:
         logger.critical(f"Необработанная ошибка: {e}", exc_info=True)
-        console.print(f"[bold red]Критическая ошибка: {e}[/bold red]")
         return 1
     
     logger.info("Программа завершена успешно")
