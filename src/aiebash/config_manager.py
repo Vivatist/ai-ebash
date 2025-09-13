@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
 Модуль для управления конфигурацией приложения.
-Использует YAML для всех настроек.
+Использует TOML для всех настроек.
 """
 
 from pathlib import Path
 from typing import Dict, Any, List
-import yaml
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
 from rich.panel import Panel
@@ -14,11 +13,27 @@ from rich.table import Table
 from rich.text import Text
 from platformdirs import user_config_dir
 
+# Импорт TOML библиотек
+try:
+    import tomllib  # Python 3.11+
+except ImportError:
+    import tomli as tomllib  # Python < 3.11
+
+try:
+    import tomllib as toml_writer
+except ImportError:
+    try:
+        import tomli_w as toml_writer
+    except ImportError:
+        # Fallback - будем использовать простую запись
+        toml_writer = None
+
+
 # === Настройки ===
 APP_NAME = "ai-ebash"
 USER_CONFIG_DIR = Path(user_config_dir(APP_NAME))
-USER_CONFIG_PATH = USER_CONFIG_DIR / "config.yaml"
-DEFAULT_CONFIG_PATH = Path(__file__).parent / "default_config.yaml"
+USER_CONFIG_PATH = USER_CONFIG_DIR / "config.toml"
+DEFAULT_CONFIG_PATH = Path(__file__).parent / "default_config.toml"
 
 
 def _format_api_key_display(api_key: str) -> str:
@@ -36,9 +51,9 @@ class ConfigManager:
 
     def __init__(self):
         self.console = Console()
-        self.yaml_config = {}  # Для хранения полной YAML структуры
+        self.toml_config = {}  # Для хранения полной TOML структуры
         self._ensure_config_exists()
-        self._load_yaml_config()
+        self._load_toml_config()
 
     def _ensure_config_exists(self) -> None:
         """Убеждается, что файл конфигурации существует"""
@@ -48,53 +63,70 @@ class ConfigManager:
                 import shutil
                 shutil.copy(DEFAULT_CONFIG_PATH, USER_CONFIG_PATH)
 
-    def _load_yaml_config(self) -> None:
-        """Загружает полную конфигурацию из YAML"""
+    def _load_toml_config(self) -> None:
+        """Загружает полную конфигурацию из TOML"""
         try:
-            with open(USER_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                self.yaml_config = yaml.safe_load(f) or {}
+            with open(USER_CONFIG_PATH, 'rb') as f:
+                self.toml_config = tomllib.load(f)
         except Exception:
-            self.yaml_config = {}
+            self.toml_config = {}
 
-    def _save_yaml_config(self) -> None:
-        """Сохраняет полную конфигурацию в YAML"""
+    def _save_toml_config(self) -> None:
+        """Сохраняет полную конфигурацию в TOML"""
         try:
             USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
             with open(USER_CONFIG_PATH, 'w', encoding='utf-8') as f:
-                yaml.dump(self.yaml_config, f, default_flow_style=False, allow_unicode=True)
+                self._write_toml(f, self.toml_config)
         except Exception as e:
             self.console.print(f"[red]Ошибка сохранения настроек: {e}[/red]")
 
+    def _write_toml(self, file, data: Dict[str, Any], prefix: str = "") -> None:
+        """Простая функция записи TOML (fallback если tomli_w недоступен)"""
+        for key, value in data.items():
+            if isinstance(value, dict):
+                if prefix:
+                    file.write(f"\n[{prefix}.{key}]\n")
+                else:
+                    file.write(f"\n[{key}]\n")
+                self._write_toml(file, value, key if not prefix else f"{prefix}.{key}")
+            else:
+                if isinstance(value, str):
+                    file.write(f'{key} = "{value}"\n')
+                elif isinstance(value, bool):
+                    file.write(f'{key} = {str(value).lower()}\n')
+                else:
+                    file.write(f'{key} = {value}\n')
+
     def get_value(self, section: str, key: str, default: Any = None) -> Any:
         """Получает значение из настроек"""
-        return self.yaml_config.get(section, {}).get(key, default)
+        return self.toml_config.get(section, {}).get(key, default)
 
     def set_value(self, section: str, key: str, value: Any) -> None:
         """Устанавливает значение в настройках"""
         # Создаем раздел, если его нет
-        if section not in self.yaml_config:
-            self.yaml_config[section] = {}
+        if section not in self.toml_config:
+            self.toml_config[section] = {}
         # Устанавливаем значение
-        self.yaml_config[section][key] = value
+        self.toml_config[section][key] = value
         # Сохраняем изменения
-        self._save_yaml_config()
+        self._save_toml_config()
 
     def get_logging_config(self) -> Dict[str, Any]:
         """Возвращает настройки логирования"""
-        return self.yaml_config.get("logging", {})
+        return self.toml_config.get("logging", {})
 
     def get_current_llm_name(self) -> str:
         """Возвращает имя текущего LLM"""
-        return self.yaml_config.get("global", {}).get("current_LLM", "openai_over_proxy")
+        return self.toml_config.get("global", {}).get("current_LLM", "openai_over_proxy")
 
     def get_current_llm_config(self) -> Dict[str, Any]:
         """Возвращает конфигурацию текущего LLM"""
         current_llm = self.get_current_llm_name()
-        return self.yaml_config.get("supported_LLMs", {}).get(current_llm, {})
+        return self.toml_config.get("supported_LLMs", {}).get(current_llm, {})
 
     def get_available_llms(self) -> List[str]:
         """Возвращает список доступных LLM"""
-        supported_llms = self.yaml_config.get("supported_LLMs", {})
+        supported_llms = self.toml_config.get("supported_LLMs", {})
         return list(supported_llms.keys())
 
     def run_interactive_setup(self) -> None:
@@ -111,7 +143,7 @@ class ConfigManager:
             self._manage_llms()
 
         # Сохранение
-        self._save_yaml_config()
+        self._save_toml_config()
         self.console.print("\n[green]✅ Настройки сохранены![/green]")
 
         # Напоминание о безопасности
@@ -161,7 +193,7 @@ class ConfigManager:
         table.add_column("Текущий", style="yellow")
 
         for i, llm_name in enumerate(available_llms, 1):
-            llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
+            llm_config = self.toml_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "не указана")
             api_key = _format_api_key_display(llm_config.get("api_key", ""))
             is_current = "✓" if llm_name == current_llm else ""
@@ -228,7 +260,7 @@ class ConfigManager:
         self.console.print("\n[bold]Выберите LLM для настройки:[/bold]")
 
         for i, llm_name in enumerate(available_llms, 1):
-            llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
+            llm_config = self.toml_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "не указана")
             self.console.print(f"{i}. {llm_name} (модель: {model})")
 
@@ -251,7 +283,7 @@ class ConfigManager:
         """Настройка конкретного LLM через его интерфейс"""
         try:
             # Получаем текущие настройки LLM
-            llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
+            llm_config = self.toml_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "")
             api_url = llm_config.get("api_url", "")
             api_key = llm_config.get("api_key", "")
@@ -269,9 +301,9 @@ class ConfigManager:
             updated_config = client.configure_llm(self.console)
 
             # Сохраняем обновленные настройки
-            if "supported_LLMs" not in self.yaml_config:
-                self.yaml_config["supported_LLMs"] = {}
-            self.yaml_config["supported_LLMs"][llm_name] = updated_config
+            if "supported_LLMs" not in self.toml_config:
+                self.toml_config["supported_LLMs"] = {}
+            self.toml_config["supported_LLMs"][llm_name] = updated_config
 
             self.console.print(f"[green]Настройки для '{llm_name}' обновлены[/green]")
 
@@ -306,7 +338,7 @@ class ConfigManager:
                         return
 
                     if Confirm.ask(f"Удалить LLM '{selected_llm}'?", default=False):
-                        del self.yaml_config["supported_LLMs"][selected_llm]
+                        del self.toml_config["supported_LLMs"][selected_llm]
                         self.console.print(f"[green]✓ LLM '{selected_llm}' удален[/green]")
                     break
                 else:
@@ -332,7 +364,7 @@ class ConfigManager:
         table.add_column("Статус", style="yellow")
 
         for llm_name in available_llms:
-            llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
+            llm_config = self.toml_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "не указана")
             api_url = llm_config.get("api_url", "не указан")
             api_key = _format_api_key_display(llm_config.get("api_key", ""))
@@ -347,7 +379,7 @@ class ConfigManager:
         panel = Panel(
             Text.from_markup(
                 "[bold red]🔒 ВАЖНО![/bold red]\n\n"
-                "API ключи хранятся в открытом виде в config.yaml\n"
+                "API ключи хранятся в открытом виде в config.toml\n"
                 "Рекомендуется:\n"
                 "• Использовать переменные окружения\n"
                 "• Установить права доступа только для владельца\n"
