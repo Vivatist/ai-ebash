@@ -6,12 +6,10 @@ The project is in the pre-alpha stage. In case of problems with the installation
 
 ## Features
 
-- Send chat-style prompts to an LLM (configurable model and endpoint).
-- Parse Markdown responses and highlight/number fenced `code` blocks.
-- Interactive selection and (optional) execution of code blocks.
-- Rich console output via `rich`.
-- Configurable via `config.yaml`.
-
+- Sends requests to LLM from the command line with a simple command and receives responses in a formatted, easy-to-read form
+- Supports dialog mode (key -d). By default, the quick questions mode with a return to the console works without a key.
+- In the dialog mode, it allows you to run scripts proposed by the neural network (be careful!)
+  
 ## Requirements
 
 - Python 3.11+
