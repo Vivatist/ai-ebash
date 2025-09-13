@@ -8,6 +8,16 @@ from rich.prompt import Prompt
 from rich.console import Console
 
 
+def _format_api_key_display(api_key: str) -> str:
+    """Форматирует отображение API ключа для логирования"""
+    if not api_key:
+        return "(не задан)"
+    elif len(api_key) <= 10:
+        return api_key
+    else:
+        return f"{api_key[:5]}...{api_key[-5:]}"
+
+
 class OpenAIClientOverProxy(LLMClient):
     def __init__(self, model: str, api_url: str, api_key: str = None, timeout: int = 60):
         super().__init__(timeout=timeout)
@@ -22,7 +32,7 @@ class OpenAIClientOverProxy(LLMClient):
         Настройка параметров OpenAI через прокси.
         Настраивается только модель и API ключ, URL фиксирован.
         """
-        console.print("\n[bold]⚙️  Настройка OpenAI через прокси:[/bold]")
+        console.print("\n[bold]Настройка OpenAI через прокси:[/bold]")
 
         # Текущие значения
         current_model = getattr(self, 'model', 'gpt-4o-mini')
@@ -34,7 +44,7 @@ class OpenAIClientOverProxy(LLMClient):
             new_model = current_model
 
         # Настройка API ключа
-        new_api_key = Prompt.ask("API Key", default=current_api_key, password=True)
+        new_api_key = Prompt.ask("API Key", default=current_api_key)
 
         # Возвращаем обновленные настройки
         return {
@@ -50,9 +60,9 @@ class OpenAIClientOverProxy(LLMClient):
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-            logger.debug("Используется API-ключ")
+            logger.debug(f"Используется API-ключ: {_format_api_key_display(self.api_key)}")
         else:
-            logger.debug("API-ключ не предоставлен")
+            logger.debug("API-ключ не предоставлен (используется публичный доступ, если поддерживается)")
         try:
 
             logger.debug(f"Выполняется POST-запрос к {self.api_url}")
@@ -121,7 +131,7 @@ class OpenAIClient(LLMClient):
             new_model = current_model
 
         # Настройка API ключа
-        new_api_key = Prompt.ask("API Key", default=current_api_key, password=True)
+        new_api_key = Prompt.ask("API Key", default=current_api_key)
 
         # Возвращаем обновленные настройки
         return {
@@ -137,10 +147,9 @@ class OpenAIClient(LLMClient):
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-            logger.debug("Используется API-ключ")
+            logger.debug(f"Используется API-ключ: {_format_api_key_display(self.api_key)}")
         else:
             logger.warning("API-ключ не предоставлен, запрос может быть отклонен")
-
         try:
             logger.debug(f"Выполняется POST-запрос к {self.api_url}")
             resp = requests.post(self.api_url, headers=headers, json=payload, timeout=self.timeout)

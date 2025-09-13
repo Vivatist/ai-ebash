@@ -20,6 +20,17 @@ USER_CONFIG_DIR = Path(user_config_dir(APP_NAME))
 USER_CONFIG_PATH = USER_CONFIG_DIR / "config.yaml"
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "default_config.yaml"
 
+
+def _format_api_key_display(api_key: str) -> str:
+    """Форматирует отображение API ключа для таблиц"""
+    if not api_key:
+        return "(не задан)"
+    elif len(api_key) <= 10:
+        return api_key
+    else:
+        return f"{api_key[:5]}...{api_key[-5:]}"
+
+
 class ConfigManager:
     """Класс для управления конфигурацией с интерактивной настройкой"""
 
@@ -108,11 +119,11 @@ class ConfigManager:
 
     def _configure_global_settings(self) -> None:
         """Настройка глобальных параметров"""
-        self.console.print("[bold]Основные настройки:[/bold]\n")
+        self.console.print(Panel(Text("Здесь и далее, чтобы оставить текущее значение - нажмите Enter. Прервать настройку - Ctrl+C", justify="center"), title="Настройка AI-ebash!", expand=False))
 
         # Список параметров для настройки
         global_settings = [
-            ("context", "Системный контекст для ИИ", self.get_value("global", "context", "")),
+            ("context", "Системный контекст для ИИ:", self.get_value("global", "context", "")),
         ]
 
         for key, description, current_value in global_settings:
@@ -120,7 +131,7 @@ class ConfigManager:
 
     def _configure_single_setting(self, key: str, description: str, current_value: str) -> None:
         """Настройка одного параметра"""
-        new_value = Prompt.ask(description + " (Enter - оставить без изменений)", default=current_value or "")
+        new_value = Prompt.ask(description, default=current_value or "")
 
         if new_value != current_value:
             self.set_value("global", key, new_value)
@@ -132,28 +143,30 @@ class ConfigManager:
 
     def _configure_current_llm(self) -> None:
         """Выбор текущего LLM"""
-        self.console.print("[bold]🤖 Выбор LLM:[/bold]\n")
+        self.console.print("[bold]Выбор нейросети для общения:[/bold]\n")
 
         available_llms = self.get_available_llms()
         current_llm = self.get_current_llm_name()
 
         if not available_llms:
-            self.console.print("[red]❌ Нет доступных LLM![/red]")
+            self.console.print("[red]Нет доступных LLM![/red]")
             return
 
         # Показываем таблицу LLM
-        table = Table(title="Доступные LLM")
+        table = Table(title="Доступные нейросети")
         table.add_column("№", style="cyan", no_wrap=True)
         table.add_column("LLM", style="magenta")
         table.add_column("Модель", style="green")
+        table.add_column("API Key", style="red")
         table.add_column("Текущий", style="yellow")
 
         for i, llm_name in enumerate(available_llms, 1):
             llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "не указана")
+            api_key = _format_api_key_display(llm_config.get("api_key", ""))
             is_current = "✓" if llm_name == current_llm else ""
 
-            table.add_row(str(i), llm_name, model, is_current)
+            table.add_row(str(i), llm_name, model, api_key, is_current)
 
         self.console.print(table)
         self.console.print()
@@ -187,7 +200,7 @@ class ConfigManager:
     def _manage_llms(self) -> None:
         """Управление списком LLM"""
         while True:
-            self.console.print("\n[bold]🔧 Управление LLM:[/bold]")
+            self.console.print("\n[bold]Управление LLM:[/bold]")
             self.console.print("1. Настроить LLM")
             self.console.print("2. Удалить LLM")
             self.console.print("3. Просмотреть все LLM")
@@ -209,10 +222,10 @@ class ConfigManager:
         available_llms = self.get_available_llms()
 
         if not available_llms:
-            self.console.print("[red]❌ Нет доступных LLM для настройки![/red]")
+            self.console.print("[yellow]Нет доступных LLM для настройки![/yellow]")
             return
 
-        self.console.print("\n[bold]⚙️  Выберите LLM для настройки:[/bold]")
+        self.console.print("\n[bold]Выберите LLM для настройки:[/bold]")
 
         for i, llm_name in enumerate(available_llms, 1):
             llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
@@ -260,7 +273,7 @@ class ConfigManager:
                 self.yaml_config["supported_LLMs"] = {}
             self.yaml_config["supported_LLMs"][llm_name] = updated_config
 
-            self.console.print(f"[green]✓ Настройки для '{llm_name}' обновлены[/green]")
+            self.console.print(f"[green]Настройки для '{llm_name}' обновлены[/green]")
 
         except Exception as e:
             self.console.print(f"[red]Ошибка при настройке LLM '{llm_name}': {e}[/red]")
@@ -274,7 +287,7 @@ class ConfigManager:
             self.console.print("[red]Нет LLM для удаления[/red]")
             return
 
-        self.console.print("\n[bold]➖ Удаление LLM:[/bold]")
+        self.console.print("\n[bold]Удаление LLM:[/bold]")
 
         for i, llm in enumerate(available_llms, 1):
             marker = " (текущий)" if llm == current_llm else ""
@@ -315,15 +328,17 @@ class ConfigManager:
         table.add_column("LLM", style="magenta")
         table.add_column("Модель", style="green")
         table.add_column("API URL", style="blue")
+        table.add_column("API Key", style="red")
         table.add_column("Статус", style="yellow")
 
         for llm_name in available_llms:
             llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "не указана")
             api_url = llm_config.get("api_url", "не указан")
+            api_key = _format_api_key_display(llm_config.get("api_key", ""))
             status = "Текущий" if llm_name == current_llm else ""
 
-            table.add_row(llm_name, model, api_url, status)
+            table.add_row(llm_name, model, api_url, api_key, status)
 
         self.console.print(table)
 
