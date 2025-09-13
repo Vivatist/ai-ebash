@@ -6,13 +6,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # Сначала импортируем настройки без импорта логгера
-from aiebash.config_manager import config_manager as settings
+from aiebash.config_manager import config_manager
 
 # Теперь импортируем и настраиваем логгер
 from aiebash.logger import configure_logger
 
 # Получаем настройки логирования и настраиваем логгер
-logging_config = settings.get_logging_config()
+logging_config = config_manager.get_logging_config()
 logger = configure_logger(logging_config)
 
 # Теперь продолжаем импорты остальных модулей
@@ -25,13 +25,13 @@ from aiebash.chat import chat_loop
 
 # === Считываем глобальные настройки ===
 logger.debug("Загрузка настроек...")
-CONTEXT: str = settings.get_value("global", "context", "")
-CURRENT_LLM: str = settings.get_value("global", "current_LLM", "openai_over_proxy")
+CONTEXT: str = config_manager.get_value("global", "context", "")
+CURRENT_LLM: str = config_manager.get_value("global", "current_LLM", "openai_over_proxy")
 
 # Настройки конкретного LLM (например, openai_over_proxy)
-MODEL = settings.get_value(CURRENT_LLM, "model", "")
-API_URL = settings.get_value(CURRENT_LLM, "api_url", "")
-API_KEY = settings.get_value(CURRENT_LLM, "api_key", "")
+MODEL = config_manager.get_value("supported_LLMs", CURRENT_LLM, {}).get("model", "")
+API_URL = config_manager.get_value("supported_LLMs", CURRENT_LLM, {}).get("api_url", "")
+API_KEY = config_manager.get_value("supported_LLMs", CURRENT_LLM, {}).get("api_key", "")
 
 logger.info(f"Используемый LLM: {CURRENT_LLM}")
 logger.info(f"Модель: {MODEL}")

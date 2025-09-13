@@ -7,7 +7,6 @@
 from pathlib import Path
 from typing import Dict, Any, List
 import yaml
-import shutil
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
 from rich.panel import Panel
@@ -57,17 +56,15 @@ class ConfigManager:
 
     def get_value(self, section: str, key: str, default: Any = None) -> Any:
         """Получает значение из настроек"""
-        return self.yaml_config.get(section, {}).get(key.lower(), default)
+        return self.yaml_config.get(section, {}).get(key, default)
 
     def set_value(self, section: str, key: str, value: Any) -> None:
         """Устанавливает значение в настройках"""
         # Создаем раздел, если его нет
         if section not in self.yaml_config:
             self.yaml_config[section] = {}
-
         # Устанавливаем значение
-        self.yaml_config[section][key.lower()] = value
-
+        self.yaml_config[section][key] = value
         # Сохраняем изменения
         self._save_yaml_config()
 
@@ -77,7 +74,7 @@ class ConfigManager:
 
     def get_current_llm_name(self) -> str:
         """Возвращает имя текущего LLM"""
-        return self.yaml_config.get("global", {}).get("current_llm", "openai_over_proxy")
+        return self.yaml_config.get("global", {}).get("current_LLM", "openai_over_proxy")
 
     def get_current_llm_config(self) -> Dict[str, Any]:
         """Возвращает конфигурацию текущего LLM"""
@@ -91,7 +88,6 @@ class ConfigManager:
 
     def run_interactive_setup(self) -> None:
         """Запускает интерактивную настройку"""
-        self.console.print("\n[bold blue]🎛️  Настройка ai-ebash[/bold blue]\n")
 
         # Настройка global параметров
         self._configure_global_settings()

@@ -8,7 +8,7 @@ import sys
 import json
 
 from aiebash.error_handling import handle_connection_error
-from aiebash.config_manager import settings
+from aiebash.config_manager import config_manager
 from aiebash.logger import log_execution_time, logger
 
 
