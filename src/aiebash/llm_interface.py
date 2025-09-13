@@ -9,7 +9,7 @@ import json
 
 from aiebash.error_handling import handle_connection_error
 from aiebash.settings import settings
-from aiebash.logger import logger
+from aiebash.logger import log_execution_time, logger
 
 
 
@@ -28,7 +28,7 @@ class LLMClient:
 
         
 
-
+    @log_execution_time # декоратор логирования времени исполнениения
     def send_chat(self, messages: List[dict]) -> str:
         """
         Отправляет сообщения в LLM, отображает прогресс-бар.
@@ -62,6 +62,7 @@ class LLMClient:
             raise error
             
         return result
+
 
     def _send_chat(self, messages: List[dict]) -> str:
         """

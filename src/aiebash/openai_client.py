@@ -1,6 +1,5 @@
 # openai_client.py
 import json, requests
-import sys
 from typing import List
 
 from .llm_interface import LLMClient
@@ -26,10 +25,7 @@ class OpenAIClientOverProxy(LLMClient):
             logger.debug("Используется API-ключ")
         else:
             logger.debug("API-ключ не предоставлен")
-            
         try:
-            # Вызываем метод отладки из родительского класса
-            self.debug_log(self.api_url, headers, payload)
             
             logger.debug(f"Выполняется POST-запрос к {self.api_url}")
             resp = requests.post(self.api_url, headers=headers, json=payload, timeout=self.timeout)

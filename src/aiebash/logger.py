@@ -111,58 +111,6 @@ def update_logger_config(config_data: dict):
     logger = configure_logger(config_data)
     logger.debug("Настройки логгера обновлены из конфигурационного файла")
 
-# Функция для логирования API-запросов с Rich-форматированием
-def log_api_request(api_url: str, headers: Dict[str, str], payload: Dict[str, Any], response=None):
-    """Логирует информацию о запросе к API"""
-    # Защита конфиденциальных данных
-    safe_headers = {k: '***' if k.lower() in ('authorization', 'api-key', 'token') else v 
-                   for k, v in headers.items()}
-    
-    # Маскируем API URL при необходимости
-    masked_url = api_url
-    if '?' in api_url:
-        base_url, params = api_url.split('?', 1)
-        masked_url = f"{base_url}?[параметры скрыты]"
-    
-    # Основная информация
-    logger.info(f"API запрос: {masked_url}")
-    
-    # Детали запроса
-    logger.debug(f"Заголовки: {json.dumps(safe_headers, ensure_ascii=False)}")
-    
-    # Безопасно логируем payload без потенциально чувствительных данных
-    safe_payload = {}
-    for k, v in payload.items():
-        if k == "messages":
-            # Для messages сохраняем только количество и роли
-            safe_payload["messages"] = [{"role": m.get("role", "unknown")} for m in v]
-            safe_payload["messages_count"] = len(v)
-        else:
-            safe_payload[k] = v
-    
-    logger.debug(f"Отправлено: {json.dumps(safe_payload, ensure_ascii=False)}")
-    
-    # Если есть ответ
-    if response:
-        status = response.status_code
-        logger.info(f"Код ответа: {status} {'✓' if 200 <= status < 300 else '✗'}")
-        
-        try:
-            resp_json = response.json()
-            
-            # Логируем только метаданные ответа
-            usage = resp_json.get('usage', {})
-            model = resp_json.get('model', 'unknown')
-            
-            # Подробная информация о токенах
-            if usage:
-                prompt_tokens = usage.get('prompt_tokens', 0)
-                completion_tokens = usage.get('completion_tokens', 0)
-                total_tokens = usage.get('total_tokens', 0)
-                logger.info(f"Модель: {model}, токены: {prompt_tokens}+{completion_tokens}={total_tokens}")
-        except Exception as e:
-            logger.warning(f"Ошибка при разборе ответа: {e}")
-
 # Вспомогательная функция для логирования времени выполнения
 def log_execution_time(func):
     """Декоратор для логирования времени выполнения функции"""
