@@ -1,67 +1,356 @@
+#!/usr/bin/env python3
+"""
+Модуль для управления конфигурацией приложения.
+Использует YAML для всех настроек.
+"""
+
 from pathlib import Path
+from typing import Dict, Any, List
 import yaml
 import shutil
-from typing import Dict, Any
+from rich.console import Console
+from rich.prompt import Prompt, Confirm
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 from platformdirs import user_config_dir
-from aiebash.logger import update_logger_config
 
-
-# --- Пути к конфигурации ---
+# === Настройки ===
 APP_NAME = "ai-ebash"
 USER_CONFIG_DIR = Path(user_config_dir(APP_NAME))
 USER_CONFIG_PATH = USER_CONFIG_DIR / "config.yaml"
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "default_config.yaml"
 
-
 class ConfigManager:
-    """Класс для работы с настройками приложения"""
+    """Класс для управления конфигурацией с интерактивной настройкой"""
 
     def __init__(self):
-        self.config_data = {}
-        self.load_settings()
+        self.console = Console()
+        self.yaml_config = {}  # Для хранения полной YAML структуры
+        self._ensure_config_exists()
+        self._load_yaml_config()
 
-    def load_settings(self) -> None:
-        """Загружает настройки из файла или создает файл с настройками по умолчанию"""
+    def _ensure_config_exists(self) -> None:
+        """Убеждается, что файл конфигурации существует"""
         if not USER_CONFIG_PATH.exists():
             USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
             if DEFAULT_CONFIG_PATH.exists():
+                import shutil
                 shutil.copy(DEFAULT_CONFIG_PATH, USER_CONFIG_PATH)
 
+    def _load_yaml_config(self) -> None:
+        """Загружает полную конфигурацию из YAML"""
         try:
             with open(USER_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                self.config_data = yaml.safe_load(f) or {}
+                self.yaml_config = yaml.safe_load(f) or {}
         except Exception:
-            self.config_data = {}
+            self.yaml_config = {}
 
-        # Обновляем конфигурацию логгера
-        update_logger_config(self.get_logging_config())
-
-    def save_settings(self) -> None:
-        """Сохраняет настройки в файл"""
+    def _save_yaml_config(self) -> None:
+        """Сохраняет полную конфигурацию в YAML"""
         try:
             USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
             with open(USER_CONFIG_PATH, 'w', encoding='utf-8') as f:
-                yaml.dump(self.config_data, f, default_flow_style=False, allow_unicode=True)
-        except Exception:
-            pass
+                yaml.dump(self.yaml_config, f, default_flow_style=False, allow_unicode=True)
+        except Exception as e:
+            self.console.print(f"[red]Ошибка сохранения настроек: {e}[/red]")
 
     def get_value(self, section: str, key: str, default: Any = None) -> Any:
         """Получает значение из настроек"""
-        try:
-            if section == "global":
-                return self.config_data.get("global", {}).get(key, default)
-            elif section == "logging":
-                return self.config_data.get("logging", {}).get(key, default)
-            else:
-                # Ищем в supported_LLMs
-                return self.config_data.get("supported_LLMs", {}).get(section, {}).get(key, default)
-        except Exception:
-            return default
+        return self.yaml_config.get(section, {}).get(key.lower(), default)
+
+    def set_value(self, section: str, key: str, value: Any) -> None:
+        """Устанавливает значение в настройках"""
+        # Создаем раздел, если его нет
+        if section not in self.yaml_config:
+            self.yaml_config[section] = {}
+
+        # Устанавливаем значение
+        self.yaml_config[section][key.lower()] = value
+
+        # Сохраняем изменения
+        self._save_yaml_config()
 
     def get_logging_config(self) -> Dict[str, Any]:
         """Возвращает настройки логирования"""
-        return self.config_data.get("logging", {})
+        return self.yaml_config.get("logging", {})
+
+    def get_current_llm_name(self) -> str:
+        """Возвращает имя текущего LLM"""
+        return self.yaml_config.get("global", {}).get("current_llm", "openai_over_proxy")
+
+    def get_current_llm_config(self) -> Dict[str, Any]:
+        """Возвращает конфигурацию текущего LLM"""
+        current_llm = self.get_current_llm_name()
+        return self.yaml_config.get("supported_LLMs", {}).get(current_llm, {})
+
+    def get_available_llms(self) -> List[str]:
+        """Возвращает список доступных LLM"""
+        supported_llms = self.yaml_config.get("supported_LLMs", {})
+        return list(supported_llms.keys())
+
+    def run_interactive_setup(self) -> None:
+        """Запускает интерактивную настройку"""
+        self.console.print("\n[bold blue]🎛️  Настройка ai-ebash[/bold blue]\n")
+
+        # Настройка global параметров
+        self._configure_global_settings()
+
+        # Выбор текущего LLM
+        self._configure_current_llm()
+
+        # Управление LLM
+        if Confirm.ask("Хотите управлять списком LLM?", default=False):
+            self._manage_llms()
+
+        # Сохранение
+        self._save_yaml_config()
+        self.console.print("\n[green]✅ Настройки сохранены![/green]")
+
+        # Напоминание о безопасности
+        self._show_security_reminder()
+
+    def _configure_global_settings(self) -> None:
+        """Настройка глобальных параметров"""
+        self.console.print("[bold]Основные настройки:[/bold]\n")
+
+        # Список параметров для настройки
+        global_settings = [
+            ("context", "Системный контекст для ИИ", self.get_value("global", "context", "")),
+        ]
+
+        for key, description, current_value in global_settings:
+            self._configure_single_setting(key, description, current_value)
+
+    def _configure_single_setting(self, key: str, description: str, current_value: str) -> None:
+        """Настройка одного параметра"""
+        new_value = Prompt.ask(description + " (Enter - оставить без изменений)", default=current_value or "")
+
+        if new_value != current_value:
+            self.set_value("global", key, new_value)
+            self.console.print(f"[green]✓ Обновлено[/green]")
+        else:
+            self.console.print("[dim]Оставлено без изменений[/dim]")
+
+        self.console.print()
+
+    def _configure_current_llm(self) -> None:
+        """Выбор текущего LLM"""
+        self.console.print("[bold]🤖 Выбор LLM:[/bold]\n")
+
+        available_llms = self.get_available_llms()
+        current_llm = self.get_current_llm_name()
+
+        if not available_llms:
+            self.console.print("[red]❌ Нет доступных LLM![/red]")
+            return
+
+        # Показываем таблицу LLM
+        table = Table(title="Доступные LLM")
+        table.add_column("№", style="cyan", no_wrap=True)
+        table.add_column("LLM", style="magenta")
+        table.add_column("Модель", style="green")
+        table.add_column("Текущий", style="yellow")
+
+        for i, llm_name in enumerate(available_llms, 1):
+            llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
+            model = llm_config.get("model", "не указана")
+            is_current = "✓" if llm_name == current_llm else ""
+
+            table.add_row(str(i), llm_name, model, is_current)
+
+        self.console.print(table)
+        self.console.print()
+
+        # Выбор
+        while True:
+            try:
+                choice = Prompt.ask(
+                    f"Выберите LLM (1-{len(available_llms)})",
+                    default=str(available_llms.index(current_llm) + 1)
+                )
+
+                choice_num = int(choice)
+                if 1 <= choice_num <= len(available_llms):
+                    selected_llm = available_llms[choice_num - 1]
+                    if selected_llm != current_llm:
+                        self.set_value("global", "current_LLM", selected_llm)
+                        self.console.print(f"[green]✓ Выбран LLM: {selected_llm}[/green]")
+                    else:
+                        self.console.print("[dim]LLM оставлен без изменений[/dim]")
+                    break
+                else:
+                    self.console.print(f"[red]Введите число от 1 до {len(available_llms)}[/red]")
+
+            except ValueError:
+                self.console.print("[red]Введите корректное число[/red]")
+            except KeyboardInterrupt:
+                self.console.print(f"\n[dim]LLM оставлен без изменений: {current_llm}[/dim]")
+                break
+
+    def _manage_llms(self) -> None:
+        """Управление списком LLM"""
+        while True:
+            self.console.print("\n[bold]🔧 Управление LLM:[/bold]")
+            self.console.print("1. Добавить новый LLM")
+            self.console.print("2. Удалить LLM")
+            self.console.print("3. Просмотреть все LLM")
+            self.console.print("4. Вернуться к настройкам")
+
+            choice = Prompt.ask("Выберите действие", choices=["1", "2", "3", "4"])
+
+            if choice == "1":
+                self._add_llm()
+            elif choice == "2":
+                self._remove_llm()
+            elif choice == "3":
+                self._show_llms()
+            elif choice == "4":
+                break
+
+    def _add_llm(self) -> None:
+        """Добавление нового LLM"""
+        self.console.print("\n[bold]➕ Добавление нового LLM:[/bold]")
+
+        name = Prompt.ask("Имя LLM").strip()
+        if not name:
+            self.console.print("[red]Имя не может быть пустым[/red]")
+            return
+
+        # Проверяем, существует ли уже
+        if name in self.yaml_config.get("supported_LLMs", {}):
+            self.console.print(f"[red]LLM '{name}' уже существует[/red]")
+            return
+
+        model = Prompt.ask("Модель", default="gpt-4o-mini")
+        api_url = Prompt.ask("API URL")
+        api_key = Prompt.ask("API Key", password=True)
+
+        new_llm = {
+            "model": model,
+            "api_url": api_url,
+            "api_key": api_key
+        }
+
+        if "supported_LLMs" not in self.yaml_config:
+            self.yaml_config["supported_LLMs"] = {}
+        self.yaml_config["supported_LLMs"][name] = new_llm
+
+        self.console.print(f"[green]✓ LLM '{name}' добавлен[/green]")
+
+    def _remove_llm(self) -> None:
+        """Удаление LLM"""
+        available_llms = self.get_available_llms()
+        current_llm = self.get_current_llm_name()
+
+        if not available_llms:
+            self.console.print("[red]Нет LLM для удаления[/red]")
+            return
+
+        self.console.print("\n[bold]➖ Удаление LLM:[/bold]")
+
+        for i, llm in enumerate(available_llms, 1):
+            marker = " (текущий)" if llm == current_llm else ""
+            self.console.print(f"{i}. {llm}{marker}")
+
+        while True:
+            try:
+                choice = Prompt.ask(f"Выберите LLM для удаления (1-{len(available_llms)})")
+                choice_num = int(choice)
+
+                if 1 <= choice_num <= len(available_llms):
+                    selected_llm = available_llms[choice_num - 1]
+
+                    if selected_llm == current_llm:
+                        self.console.print("[red]Нельзя удалить текущий LLM[/red]")
+                        return
+
+                    if Confirm.ask(f"Удалить LLM '{selected_llm}'?", default=False):
+                        del self.yaml_config["supported_LLMs"][selected_llm]
+                        self.console.print(f"[green]✓ LLM '{selected_llm}' удален[/green]")
+                    break
+                else:
+                    self.console.print(f"[red]Введите число от 1 до {len(available_llms)}[/red]")
+
+            except ValueError:
+                self.console.print("[red]Введите корректное число[/red]")
+
+    def _show_llms(self) -> None:
+        """Показать все LLM"""
+        available_llms = self.get_available_llms()
+        current_llm = self.get_current_llm_name()
+
+        if not available_llms:
+            self.console.print("[red]Нет доступных LLM[/red]")
+            return
+
+        table = Table(title="Все LLM")
+        table.add_column("LLM", style="magenta")
+        table.add_column("Модель", style="green")
+        table.add_column("API URL", style="blue")
+        table.add_column("Статус", style="yellow")
+
+        for llm_name in available_llms:
+            llm_config = self.yaml_config.get("supported_LLMs", {}).get(llm_name, {})
+            model = llm_config.get("model", "не указана")
+            api_url = llm_config.get("api_url", "не указан")
+            status = "Текущий" if llm_name == current_llm else ""
+
+            table.add_row(llm_name, model, api_url, status)
+
+        self.console.print(table)
+
+    def _show_security_reminder(self) -> None:
+        """Показать напоминание о безопасности"""
+        panel = Panel(
+            Text.from_markup(
+                "[bold red]🔒 ВАЖНО![/bold red]\n\n"
+                "API ключи хранятся в открытом виде в config.yaml\n"
+                "Рекомендуется:\n"
+                "• Использовать переменные окружения\n"
+                "• Установить права доступа только для владельца\n"
+                "• Не коммитить ключи в git\n\n"
+                "[cyan]Пример:[/cyan]\n"
+                "export AIEBASH_OPENAI_API_KEY=your_key_here"
+            ),
+            title="Безопасность",
+            border_style="red"
+        )
+        self.console.print(panel)
 
 
 # Создаем глобальный экземпляр
-settings = ConfigManager()
+config_manager = ConfigManager()
+
+# Функции для обратной совместимости
+def get_value(section: str, key: str, default: Any = None) -> Any:
+    """Функция для обратной совместимости"""
+    return config_manager.get_value(section, key, default)
+
+def set_value(section: str, key: str, value: Any) -> None:
+    """Функция для обратной совместимости"""
+    config_manager.set_value(section, key, value)
+
+def get_logging_config() -> Dict[str, Any]:
+    """Функция для обратной совместимости"""
+    return config_manager.get_logging_config()
+
+def get_current_llm_name() -> str:
+    """Функция для обратной совместимости"""
+    return config_manager.get_current_llm_name()
+
+def get_current_llm_config() -> Dict[str, Any]:
+    """Функция для обратной совместимости"""
+    return config_manager.get_current_llm_config()
+
+def get_available_llms() -> List[str]:
+    """Функция для обратной совместимости"""
+    return config_manager.get_available_llms()
+
+def run_interactive_setup() -> None:
+    """Запуск интерактивной настройки"""
+    config_manager.run_interactive_setup()
+
+
+if __name__ == "__main__":
+    run_interactive_setup()

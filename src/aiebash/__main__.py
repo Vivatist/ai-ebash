@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # Сначала импортируем настройки без импорта логгера
-from aiebash.config_manager import settings
+from aiebash.config_manager import config_manager as settings
 
 # Теперь импортируем и настраиваем логгер
 from aiebash.logger import configure_logger
@@ -63,7 +63,19 @@ def main() -> None:
 
     try:
         args = parse_args()
-        logger.debug(f"Полученные аргументы: dialog={args.dialog}, prompt={args.prompt or '(пусто)'}")
+        logger.debug(f"Полученные аргументы: dialog={args.dialog}, settings={args.settings}, prompt={args.prompt or '(пусто)'}")
+        
+        # Обработка режима настройки
+        if args.settings:
+            logger.info("Запуск интерактивного режима настройки")
+            try:
+                from aiebash.config_manager import run_interactive_setup
+                run_interactive_setup()
+                logger.info("Режим настройки завершен")
+                return 0
+            except Exception as e:
+                logger.error(f"Ошибка в режиме настройки: {e}", exc_info=True)
+                return 1
         
         chat_mode: bool = args.dialog
         prompt: str = " ".join(args.prompt)

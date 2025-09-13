@@ -21,6 +21,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-s",
+    "--settings",
+    action="store_true",
+    help="Запуск интерактивного режима настройки приложения.",
+)
+
+parser.add_argument(
     "prompt",
     nargs="*",
     help="Ваш запрос к ИИ.",
