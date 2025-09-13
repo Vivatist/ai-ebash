@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # Сначала импортируем настройки без импорта логгера
-from aiebash.settings import settings
+from aiebash.config_manager import settings
 
 # Теперь импортируем и настраиваем логгер
 from aiebash.logger import configure_logger
@@ -26,14 +26,14 @@ from aiebash.chat import chat_loop
 # === Считываем глобальные настройки ===
 logger.debug("Загрузка настроек...")
 CONTEXT: str = settings.get_value("global", "context", "")
-BACKEND: str = settings.get_value("global", "backend", "openai_over_proxy")
+CURRENT_LLM: str = settings.get_value("global", "current_LLM", "openai_over_proxy")
 
-# Настройки конкретного бэкенда (например, openai_over_proxy)
-MODEL = settings.get_value(BACKEND, "model", "")
-API_URL = settings.get_value(BACKEND, "api_url", "")
-API_KEY = settings.get_value(BACKEND, "api_key", "")
+# Настройки конкретного LLM (например, openai_over_proxy)
+MODEL = settings.get_value(CURRENT_LLM, "model", "")
+API_URL = settings.get_value(CURRENT_LLM, "api_url", "")
+API_KEY = settings.get_value(CURRENT_LLM, "api_key", "")
 
-logger.info(f"Используемый бэкенд: {BACKEND}")
+logger.info(f"Используемый LLM: {CURRENT_LLM}")
 logger.info(f"Модель: {MODEL}")
 logger.debug(f"API URL: {API_URL}")
 
@@ -42,12 +42,12 @@ logger.debug(f"API URL: {API_URL}")
 logger.debug("Инициализация LLM клиента...")
 try:
     llm_client = create_llm_client(
-        backend=BACKEND,
+        backend=CURRENT_LLM,
         model=MODEL,
         api_url=API_URL,
         api_key=API_KEY,
     )
-    logger.info("Настройки клиента: backend=%s, model=%s", BACKEND, MODEL)
+    logger.info("Настройки клиента: backend=%s, model=%s", CURRENT_LLM, MODEL,  extra={"api_url": API_URL, "api_key": "****" if API_KEY else None})
     logger.debug("LLM клиент успешно создан")
 except Exception as e:
     logger.error(f"Ошибка при создании LLM клиента: {e}", exc_info=True)

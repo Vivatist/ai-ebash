@@ -1,12 +1,13 @@
 global:
   context: "Ты профессиональный системный администратор. Отвечай всегда на русском языке. Ты разговариваешь с пользователем в терминале."
-  backend: openai_over_proxy
-  logging:
-    level: DEBUG
-    console_level: CRITICAL # Отключает вывод в консоль (кроме критических ошибок)
-    file_level: DEBUG
+  current_LLM: openai_over_proxy
 
-connections:
+logging:
+  level: DEBUG
+  console_level: CRITICAL # Если CRITICAL - отключает вывод в консоль (кроме критических ошибок)
+  file_level: DEBUG
+
+supported_LLMs:
   openai_over_proxy:
     model: gpt-4o-mini
     api_url: https://openai-proxy.andrey-bch-1976.workers.dev/v1/chat/completions

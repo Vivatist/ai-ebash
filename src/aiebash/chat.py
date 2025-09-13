@@ -4,7 +4,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from aiebash.formatter_text import annotate_code_blocks
 from aiebash.script_executor import run_code_block
-from aiebash.settings import settings
+from aiebash.config_manager import settings
 from aiebash.logger import logger
 
 
