@@ -25,10 +25,7 @@ sudo apt install pipx python3-venv -y
 pipx ensurepath
 ```
 
-2. Restart the terminal or update the PATH:
-```bash
-source ~/.bashrc
-```
+2. Restart the terminal
 
 **Note:** If you encounter issues with pipx not recognizing the package, you can also install it using pip:
 ```bash
@@ -42,17 +39,14 @@ wget -qO latest.deb $(wget -qO- https://api.github.com/repos/Vivatist/ai-ebash/r
   | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
 ```
 
-1. Install ai-ebash:
-```bash
-pipx install ai-ebash
-```
-
-1. Install the package:
+2. Install the package:
 ```bash
 sudo dpkg -i ./latest.deb
 sudo apt-get install -f -y
 ```
 
+3. Restart the terminal 
+   
 ### Windows (experemental)
 
 1. Install Python v3.11+ (if not already installed):
