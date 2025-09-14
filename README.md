@@ -35,13 +35,17 @@ source ~/.bashrc
 pipx install ai-ebash
 ```
 
-### DEB Package (Debian/Ubuntu)
-1. Download the latest DEB package from [GitHub Releases](https://github.com/Vivatist/ai-ebash/releases)
+### Debian/Ubuntu (*.deb package)
+1. Download the latest DEB package from [GitHub Releases](https://github.com/Vivatist/ai-ebash/releases) 
+```bash
+wget -qO latest.deb $(wget -qO- https://api.github.com/repos/Vivatist/ai-ebash/releases/latest \
+  | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
+```
+
 2. Install the package:
 ```bash
-sudo dpkg -i ai-ebash_*.deb
-# If there are dependency issues, run:
-sudo apt-get install -f
+sudo dpkg -i ./latest.deb
+sudo apt-get install -f -y
 ```
 
 ### Windows (experemental)
