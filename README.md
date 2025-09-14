@@ -29,8 +29,20 @@ pipx ensurepath
 ```bash
 source ~/.bashrc
 ```
+<<<<<<< DEB_package
+**Note:** If you encounter issues with pipx not recognizing the package, you can also install it using pip:
+```bash
+pip install ai-ebash
+```
 
-3. Install ai-ebash:
+### Debian/Ubuntu (*.deb package)
+1. Download the latest DEB package from [GitHub Releases](https://github.com/Vivatist/ai-ebash/releases) 
+```bash
+wget -qO latest.deb $(wget -qO- https://api.github.com/repos/Vivatist/ai-ebash/releases/latest \
+  | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
+```
+
+1. Install ai-ebash:
 ```bash
 pipx install ai-ebash
 ```
