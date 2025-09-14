@@ -16,7 +16,7 @@ The project is in the pre-alpha stage. In case of problems with the installation
 
 ## Installation
 
-### PyPi (pipx) Package (Debian/Ubuntu)
+### Debian/Ubuntu (pipx package)
 
 1. Install pipx (if not already installed):
 ```bash
@@ -35,17 +35,6 @@ source ~/.bashrc
 pipx install ai-ebash
 ```
 
-**Note:** If you encounter issues with pipx not recognizing the package, you can also install it using pip:
-```bash
-pip install ai-ebash
-```
-
-### Debian/Ubuntu (*.deb package)
-1. Download the latest DEB package from [GitHub Releases](https://github.com/Vivatist/ai-ebash/releases) 
-```bash
-wget -qO latest.deb $(wget -qO- https://api.github.com/repos/Vivatist/ai-ebash/releases/latest \
-  | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
-```
 
 2. Install the package:
 ```bash
