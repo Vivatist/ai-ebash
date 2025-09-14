@@ -40,16 +40,16 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
 
-      - name: Ускорение сборки DEB (отключение man-db)
-        run: |
-          # Отключаем автоматическое обновление man-db
-          echo "man-db man-db/auto-update boolean false" | sudo debconf-set-selections
+      # - name: Ускорение сборки DEB (отключение man-db)
+      #   run: |
+      #     # Отключаем автоматическое обновление man-db
+      #     echo "man-db man-db/auto-update boolean false" | sudo debconf-set-selections
           
-          # Создаем политику исключения документации
-          echo 'path-exclude=/usr/share/man/*' | sudo tee /etc/dpkg/dpkg.cfg.d/exclude-documentation
+      #     # Создаем политику исключения документации
+      #     echo 'path-exclude=/usr/share/man/*' | sudo tee /etc/dpkg/dpkg.cfg.d/exclude-documentation
           
-          # Устанавливаем переменные для пропуска проверок и документации
-          export DEB_BUILD_OPTIONS=nocheck,nodocs
+      #     # Устанавливаем переменные для пропуска проверок и документации
+      #     export DEB_BUILD_OPTIONS=nocheck,nodocs
 
       - name: Install system dependencies for DEB build
         run: |
