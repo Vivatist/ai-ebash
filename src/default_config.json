@@ -9,12 +9,12 @@
     "file_level": "DEBUG"
   },
   "supported_LLMs": {
-    "OpenAI over Proxy": {
+    "openai_over_proxy": {
       "model": "gpt-4o-mini",
       "api_key": "",
       "api_url": "https://openai-proxy.andrey-bch-1976.workers.dev/v1/chat/completions"
     },
-    "OpenAI": {
+    "openai": {
       "model": "gpt-4o-mini",
       "api_url": "https://api.openai.com/v1/chat/completions",
       "api_key": ""
