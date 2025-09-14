@@ -35,6 +35,11 @@ source ~/.bashrc
 pipx install ai-ebash
 ```
 
+**Note:** If you encounter issues with pipx not recognizing the package, you can also install it using pip:
+```bash
+pip install ai-ebash
+```
+
 ### Debian/Ubuntu (*.deb package)
 1. Download the latest DEB package from [GitHub Releases](https://github.com/Vivatist/ai-ebash/releases) 
 ```bash
@@ -84,7 +89,7 @@ sudo apt purge python3-ai-ebash
 
 ### If installed via Windows:
 ```bash
-apt uninstall ai-ebash
+pip uninstall ai-ebash
 ```
 
 ### You can also use dpkg.:
