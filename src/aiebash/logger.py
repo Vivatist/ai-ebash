@@ -53,8 +53,8 @@ def configure_logger(config_data: Optional[Dict] = None) -> logging.Logger:
     
     # Применяем настройки из конфигурации, если они есть
     if config_data:      
-        log_level = get_log_level(config_data.get('level', 'INFO'))
-        console_level = get_log_level(config_data.get('console_level', 'INFO'))
+        log_level = get_log_level(config_data.get('level', 'DEBUG'))
+        console_level = get_log_level(config_data.get('console_level', 'DEBUG'))
         file_level = get_log_level(config_data.get('file_level', 'DEBUG'))
         file_enabled = config_data.get('file_enabled', True)
     

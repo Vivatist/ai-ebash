@@ -5,7 +5,7 @@
   },
   "logging": {
     "level": "DEBUG",
-    "console_level": "CRITICAL",
+    "console_level": "DEBUG",
     "file_level": "DEBUG"
   },
   "supported_LLMs": {

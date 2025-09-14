@@ -13,6 +13,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 from platformdirs import user_config_dir
+import shutil
 
 
 # === Настройки ===
@@ -42,12 +43,18 @@ class ConfigManager:
         self._load_json_config()
 
     def _ensure_config_exists(self) -> None:
-        """Убеждается, что файл конфигурации существует"""
+    # Создаем директорию в любом случае (независимо от наличия файла)
+        USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        self.console.print(f"Проверка наличия конфигурационного файла в {USER_CONFIG_PATH}")
+        
+        # Если файл настроек пользователя не существует
         if not USER_CONFIG_PATH.exists():
-            USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-            if DEFAULT_CONFIG_PATH.exists():
-                import shutil
-                shutil.copy(DEFAULT_CONFIG_PATH, USER_CONFIG_PATH)
+            try:
+                # Проверяем наличие файла дефолтного конфига
+                shutil.copy2(DEFAULT_CONFIG_PATH, USER_CONFIG_PATH)
+            except (PermissionError, IOError) as e:
+                self.console.print(f"Ошибка при создании конфигурации: {e}")
+                self.console.print(f"Попробуйте создать файл вручную: {USER_CONFIG_PATH}")
 
     def _load_json_config(self) -> None:
         """Загружает полную конфигурацию из JSON"""
@@ -360,6 +367,8 @@ class ConfigManager:
             border_style="red"
         )
         self.console.print(panel)
+
+    
 
 
 # Создаем глобальный экземпляр
