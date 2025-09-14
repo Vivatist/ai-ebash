@@ -29,7 +29,7 @@ pipx ensurepath
 ```bash
 source ~/.bashrc
 ```
-<<<<<<< DEB_package
+
 **Note:** If you encounter issues with pipx not recognizing the package, you can also install it using pip:
 ```bash
 pip install ai-ebash
