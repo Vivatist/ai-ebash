@@ -4,3 +4,29 @@ set -e
 if [ -f /usr/share/ai-ebash/requirements.txt ]; then
     pip3 install -r /usr/share/ai-ebash/requirements.txt
 fi
+
+case "$1" in
+    configure)
+        # Создаем симлинк для команды ai
+        ln -sf /usr/bin/ai-ebash /usr/bin/ai
+        
+        # Проверяем наличие файла конфигурации
+        for user_home in /home/*; do
+            user=$(basename "$user_home")
+            config_dir="$user_home/.config/ai-ebash"
+            
+            if [ -d "$user_home" ] && [ "$user" != "*" ] && id "$user" &>/dev/null; then
+                # Создаем директорию если её нет
+                mkdir -p "$config_dir"
+                
+                # Если конфиг не существует, копируем дефолтный
+                if [ ! -f "$config_dir/config.json" ]; then
+                    cp /usr/lib/python3/dist-packages/aiebash/default_config.json "$config_dir/config.json"
+                    chown -R "$user:$user" "$config_dir"
+                fi
+            fi
+        done
+    ;;
+esac
+
+exit 0
