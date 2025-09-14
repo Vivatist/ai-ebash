@@ -48,12 +48,27 @@ jobs:
       - name: Build DEB package
         run: |
           pip install --upgrade stdeb
+          
+          # Создаем файл stdeb.cfg для настройки включения файлов данных
+          echo '[DEFAULT]' > stdeb.cfg
+          echo 'Package: ai-ebash' >> stdeb.cfg
+          echo 'MIME-Desktop-Files: debian/' >> stdeb.cfg
+          echo 'Suite: focal' >> stdeb.cfg
+          
           python setup.py --command-packages=stdeb.command sdist_dsc
+          
+          # Явно копируем файл конфигурации в пакет
+          mkdir -p deb_dist/ai-ebash-*/debian/tmp/usr/lib/python3/dist-packages/aiebash/
+          cp src/aiebash/default_config.json deb_dist/ai-ebash-*/debian/tmp/usr/lib/python3/dist-packages/aiebash/
           
           # Заменяем debian/rules с использованием табуляции (а не пробелов!)
           echo '#!/usr/bin/make -f' > deb_dist/ai-ebash-*/debian/rules
           echo '%:' >> deb_dist/ai-ebash-*/debian/rules
           echo -e '\tdh $@ --with python3 --buildsystem=pybuild' >> deb_dist/ai-ebash-*/debian/rules
+          echo 'override_dh_auto_install:' >> deb_dist/ai-ebash-*/debian/rules
+          echo -e '\tdh_auto_install' >> deb_dist/ai-ebash-*/debian/rules
+          echo -e '\tmkdir -p debian/ai-ebash/usr/lib/python3/dist-packages/aiebash/' >> deb_dist/ai-ebash-*/debian/rules
+          echo -e '\tcp -r src/aiebash/default_config.json debian/ai-ebash/usr/lib/python3/dist-packages/aiebash/' >> deb_dist/ai-ebash-*/debian/rules
           chmod +x deb_dist/ai-ebash-*/debian/rules
           
           cd deb_dist/ai-ebash-*

@@ -40,13 +40,13 @@ pipx install ai-ebash
 ### Debian/Ubuntu (*.deb package)
 1. Download the latest DEB package from [GitHub Releases](https://github.com/Vivatist/ai-ebash/releases) 
 ```bash
-wget -qO latest.deb $(wget -qO- https://api.github.com/repos/user/repo/releases/latest \ | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
+wget -qO latest.deb $(wget -qO- https://api.github.com/repos/Vivatist/ai-ebash/releases/latest \
+  | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
 ```
 
 2. Install the package:
 ```bash
 sudo dpkg -i ./latest.deb
-# If there are dependency issues, run:
 sudo apt-get install -f
 ```
 

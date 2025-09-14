@@ -45,8 +45,6 @@ class ConfigManager:
     def _ensure_config_exists(self) -> None:
     # Создаем директорию в любом случае (независимо от наличия файла)
         USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        self.console.print(f"Проверка наличия конфигурационного файла в {USER_CONFIG_PATH}")
-        
         # Если файл настроек пользователя не существует
         if not USER_CONFIG_PATH.exists():
             try:
