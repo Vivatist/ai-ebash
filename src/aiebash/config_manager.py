@@ -407,7 +407,7 @@ class ConfigManager:
         self.console.print()
 
         # Ввод данных
-        name = self.menu.get_user_input("Название нейросети")
+        name = self.menu.get_user_input("Название нейросети (может быть любым уникальным именем)").strip()
         if not name:
             self.console.print("[red]Название не может быть пустым![/red]")
             self.console.input("\n[cyan]Нажмите Enter для продолжения...[/cyan]")
