@@ -1,6 +1,17 @@
 import re
 import platform
 
+
+def _format_api_key_display(api_key: str) -> str:
+    """Форматирует отображение API ключа для логирования"""
+    if not api_key:
+        return "(не задан)"
+    elif len(api_key) <= 10:
+        return api_key
+    else:
+        return f"{api_key[:5]}...{api_key[-5:]}"
+
+
 def annotate_code_blocks(md_text):
     """
     Находит fenced code blocks с языком bash (для Linux) или bat (для Windows),
