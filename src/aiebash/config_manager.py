@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 Модуль для управления конфигурацией приложения.
-Использует TOML для всех настроек.
+Использует JSON для всех настроек.
 """
 
+import json
 from pathlib import Path
 from typing import Dict, Any, List
 from rich.console import Console
@@ -13,27 +14,12 @@ from rich.table import Table
 from rich.text import Text
 from platformdirs import user_config_dir
 
-# Импорт TOML библиотек
-try:
-    import tomllib  # Python 3.11+
-except ImportError:
-    import tomli as tomllib  # Python < 3.11
-
-try:
-    import tomllib as toml_writer
-except ImportError:
-    try:
-        import tomli_w as toml_writer
-    except ImportError:
-        # Fallback - будем использовать простую запись
-        toml_writer = None
-
 
 # === Настройки ===
 APP_NAME = "ai-ebash"
 USER_CONFIG_DIR = Path(user_config_dir(APP_NAME))
-USER_CONFIG_PATH = USER_CONFIG_DIR / "config.toml"
-DEFAULT_CONFIG_PATH = Path(__file__).parent / "default_config.toml"
+USER_CONFIG_PATH = USER_CONFIG_DIR / "config.json"
+DEFAULT_CONFIG_PATH = Path(__file__).parent / "default_config.json"
 
 
 def _format_api_key_display(api_key: str) -> str:
@@ -51,82 +37,63 @@ class ConfigManager:
 
     def __init__(self):
         self.console = Console()
-        self.toml_config = {}  # Для хранения полной TOML структуры
+        self.json_config = {}  # Для хранения полной JSON структуры
         self._ensure_config_exists()
-        self._load_toml_config()
+        self._load_json_config()
 
     def _ensure_config_exists(self) -> None:
         """Убеждается, что файл конфигурации существует"""
-        if not USER_CONFIG_PATH.exists():
-            USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-            if DEFAULT_CONFIG_PATH.exists():
-                import shutil
-                shutil.copy(DEFAULT_CONFIG_PATH, USER_CONFIG_PATH)
-
-    def _load_toml_config(self) -> None:
-        """Загружает полную конфигурацию из TOML"""
         try:
-            with open(USER_CONFIG_PATH, 'rb') as f:
-                self.toml_config = tomllib.load(f)
-        except Exception:
-            self.toml_config = {}
+            if not USER_CONFIG_PATH.exists():
+                USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+                if DEFAULT_CONFIG_PATH.exists():
+                    import shutil
+                    shutil.copy(DEFAULT_CONFIG_PATH, USER_CONFIG_PATH)
+        except Exception as e:
+            self.console.print(f"[red]Ошибка при создании файла конфигурации: {e}[/red]")
 
-    def _save_toml_config(self) -> None:
-        """Сохраняет полную конфигурацию в TOML"""
+    def _load_json_config(self) -> None:
+        """Загружает полную конфигурацию из JSON"""
+        try:
+            with open(USER_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                self.json_config = json.load(f)
+        except Exception:
+            self.json_config = {}
+
+    def _save_json_config(self) -> None:
+        """Сохраняет полную конфигурацию в JSON"""
         try:
             USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
             with open(USER_CONFIG_PATH, 'w', encoding='utf-8') as f:
-                self._write_toml(f, self.toml_config)
+                json.dump(self.json_config, f, indent=2, ensure_ascii=False)
         except Exception as e:
             self.console.print(f"[red]Ошибка сохранения настроек: {e}[/red]")
 
-    def _write_toml(self, file, data: Dict[str, Any], prefix: str = "") -> None:
-        """Простая функция записи TOML (fallback если tomli_w недоступен)"""
-        for key, value in data.items():
-            if isinstance(value, dict):
-                if prefix:
-                    file.write(f"\n[{prefix}.{key}]\n")
-                else:
-                    file.write(f"\n[{key}]\n")
-                self._write_toml(file, value, key if not prefix else f"{prefix}.{key}")
-            else:
-                if isinstance(value, str):
-                    file.write(f'{key} = "{value}"\n')
-                elif isinstance(value, bool):
-                    file.write(f'{key} = {str(value).lower()}\n')
-                else:
-                    file.write(f'{key} = {value}\n')
-
     def get_value(self, section: str, key: str, default: Any = None) -> Any:
         """Получает значение из настроек"""
-        return self.toml_config.get(section, {}).get(key, default)
+        return self.json_config.get(section, {}).get(key, default)
 
     def set_value(self, section: str, key: str, value: Any) -> None:
         """Устанавливает значение в настройках"""
-        # Создаем раздел, если его нет
-        if section not in self.toml_config:
-            self.toml_config[section] = {}
-        # Устанавливаем значение
-        self.toml_config[section][key] = value
-        # Сохраняем изменения
-        self._save_toml_config()
+        self.json_config.setdefault(section, {})[key] = value
+        self._save_json_config()
 
     def get_logging_config(self) -> Dict[str, Any]:
         """Возвращает настройки логирования"""
-        return self.toml_config.get("logging", {})
+        return self.json_config.get("logging", {})
 
     def get_current_llm_name(self) -> str:
         """Возвращает имя текущего LLM"""
-        return self.toml_config.get("global", {}).get("current_LLM", "openai_over_proxy")
+        return self.json_config.get("global", {}).get("current_LLM", "openai_over_proxy")
 
     def get_current_llm_config(self) -> Dict[str, Any]:
         """Возвращает конфигурацию текущего LLM"""
         current_llm = self.get_current_llm_name()
-        return self.toml_config.get("supported_LLMs", {}).get(current_llm, {})
+        return self.json_config.get("supported_LLMs", {}).get(current_llm, {})
 
     def get_available_llms(self) -> List[str]:
         """Возвращает список доступных LLM"""
-        supported_llms = self.toml_config.get("supported_LLMs", {})
+        supported_llms = self.json_config.get("supported_LLMs", {})
         return list(supported_llms.keys())
 
     def run_interactive_setup(self) -> None:
@@ -143,7 +110,7 @@ class ConfigManager:
             self._manage_llms()
 
         # Сохранение
-        self._save_toml_config()
+        self._save_json_config()
         self.console.print("\n[green]✅ Настройки сохранены![/green]")
 
         # Напоминание о безопасности
@@ -193,7 +160,7 @@ class ConfigManager:
         table.add_column("Текущий", style="yellow")
 
         for i, llm_name in enumerate(available_llms, 1):
-            llm_config = self.toml_config.get("supported_LLMs", {}).get(llm_name, {})
+            llm_config = self.json_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "не указана")
             api_key = _format_api_key_display(llm_config.get("api_key", ""))
             is_current = "✓" if llm_name == current_llm else ""
@@ -204,50 +171,51 @@ class ConfigManager:
         self.console.print()
 
         # Выбор
-        while True:
-            try:
-                choice = Prompt.ask(
-                    f"Выберите LLM (1-{len(available_llms)})",
-                    default=str(available_llms.index(current_llm) + 1)
-                )
+        try:
+            default_choice = str(available_llms.index(current_llm) + 1) if current_llm in available_llms else "1"
+            choice = Prompt.ask(
+                f"Выберите LLM (1-{len(available_llms)})",
+                default=default_choice
+            )
 
-                choice_num = int(choice)
-                if 1 <= choice_num <= len(available_llms):
-                    selected_llm = available_llms[choice_num - 1]
-                    if selected_llm != current_llm:
-                        self.set_value("global", "current_LLM", selected_llm)
-                        self.console.print(f"[green]✓ Выбран LLM: {selected_llm}[/green]")
-                    else:
-                        self.console.print("[dim]LLM оставлен без изменений[/dim]")
-                    break
+            choice_num = int(choice)
+            if 1 <= choice_num <= len(available_llms):
+                selected_llm = available_llms[choice_num - 1]
+                if selected_llm != current_llm:
+                    self.set_value("global", "current_LLM", selected_llm)
+                    self.console.print(f"[green]✓ Выбран LLM: {selected_llm}[/green]")
                 else:
-                    self.console.print(f"[red]Введите число от 1 до {len(available_llms)}[/red]")
+                    self.console.print("[dim]LLM оставлен без изменений[/dim]")
+            else:
+                self.console.print(f"[red]Введите число от 1 до {len(available_llms)}[/red]")
 
-            except ValueError:
-                self.console.print("[red]Введите корректное число[/red]")
-            except KeyboardInterrupt:
-                self.console.print(f"\n[dim]LLM оставлен без изменений: {current_llm}[/dim]")
-                break
+        except ValueError:
+            self.console.print("[red]Введите корректное число[/red]")
+        except KeyboardInterrupt:
+            self.console.print(f"\n[dim]LLM оставлен без изменений: {current_llm}[/dim]")
 
     def _manage_llms(self) -> None:
         """Управление списком LLM"""
+        actions = {
+            "1": ("Настроить LLM", self._configure_llm),
+            "2": ("Удалить LLM", self._remove_llm),
+            "3": ("Просмотреть все LLM", self._show_llms),
+            "4": ("Вернуться к настройкам", None)
+        }
+
         while True:
             self.console.print("\n[bold]Управление LLM:[/bold]")
-            self.console.print("1. Настроить LLM")
-            self.console.print("2. Удалить LLM")
-            self.console.print("3. Просмотреть все LLM")
-            self.console.print("4. Вернуться к настройкам")
+            for key, (description, _) in actions.items():
+                self.console.print(f"{key}. {description}")
 
-            choice = Prompt.ask("Выберите действие", choices=["1", "2", "3", "4"])
+            choice = Prompt.ask("Выберите действие", choices=list(actions.keys()))
 
-            if choice == "1":
-                self._configure_llm()
-            elif choice == "2":
-                self._remove_llm()
-            elif choice == "3":
-                self._show_llms()
-            elif choice == "4":
+            if choice == "4":
                 break
+
+            action_name, action_func = actions[choice]
+            if action_func:
+                action_func()
 
     def _configure_llm(self) -> None:
         """Настройка существующего LLM через интерфейс"""
@@ -260,7 +228,7 @@ class ConfigManager:
         self.console.print("\n[bold]Выберите LLM для настройки:[/bold]")
 
         for i, llm_name in enumerate(available_llms, 1):
-            llm_config = self.toml_config.get("supported_LLMs", {}).get(llm_name, {})
+            llm_config = self.json_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "не указана")
             self.console.print(f"{i}. {llm_name} (модель: {model})")
 
@@ -282,13 +250,11 @@ class ConfigManager:
     def _configure_specific_llm(self, llm_name: str) -> None:
         """Настройка конкретного LLM через его интерфейс"""
         try:
-            # Получаем текущие настройки LLM
-            llm_config = self.toml_config.get("supported_LLMs", {}).get(llm_name, {})
+            llm_config = self.json_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "")
             api_url = llm_config.get("api_url", "")
             api_key = llm_config.get("api_key", "")
 
-            # Создаем клиент через фабрику
             from aiebash.llm_factory import create_llm_client
             client = create_llm_client(
                 backend=llm_name,
@@ -297,13 +263,8 @@ class ConfigManager:
                 api_key=api_key
             )
 
-            # Вызываем метод настройки через интерфейс
             updated_config = client.configure_llm(self.console)
-
-            # Сохраняем обновленные настройки
-            if "supported_LLMs" not in self.toml_config:
-                self.toml_config["supported_LLMs"] = {}
-            self.toml_config["supported_LLMs"][llm_name] = updated_config
+            self.json_config.setdefault("supported_LLMs", {})[llm_name] = updated_config
 
             self.console.print(f"[green]Настройки для '{llm_name}' обновлены[/green]")
 
@@ -338,7 +299,7 @@ class ConfigManager:
                         return
 
                     if Confirm.ask(f"Удалить LLM '{selected_llm}'?", default=False):
-                        del self.toml_config["supported_LLMs"][selected_llm]
+                        del self.json_config["supported_LLMs"][selected_llm]
                         self.console.print(f"[green]✓ LLM '{selected_llm}' удален[/green]")
                     break
                 else:
@@ -364,7 +325,7 @@ class ConfigManager:
         table.add_column("Статус", style="yellow")
 
         for llm_name in available_llms:
-            llm_config = self.toml_config.get("supported_LLMs", {}).get(llm_name, {})
+            llm_config = self.json_config.get("supported_LLMs", {}).get(llm_name, {})
             model = llm_config.get("model", "не указана")
             api_url = llm_config.get("api_url", "не указан")
             api_key = _format_api_key_display(llm_config.get("api_key", ""))
@@ -379,7 +340,7 @@ class ConfigManager:
         panel = Panel(
             Text.from_markup(
                 "[bold red]🔒 ВАЖНО![/bold red]\n\n"
-                "API ключи хранятся в открытом виде в config.toml\n"
+                "API ключи хранятся в открытом виде в config.json\n"
                 "Рекомендуется:\n"
                 "• Использовать переменные окружения\n"
                 "• Установить права доступа только для владельца\n"
@@ -396,30 +357,6 @@ class ConfigManager:
 # Создаем глобальный экземпляр
 config_manager = ConfigManager()
 
-# Функции для обратной совместимости
-def get_value(section: str, key: str, default: Any = None) -> Any:
-    """Функция для обратной совместимости"""
-    return config_manager.get_value(section, key, default)
-
-def set_value(section: str, key: str, value: Any) -> None:
-    """Функция для обратной совместимости"""
-    config_manager.set_value(section, key, value)
-
-def get_logging_config() -> Dict[str, Any]:
-    """Функция для обратной совместимости"""
-    return config_manager.get_logging_config()
-
-def get_current_llm_name() -> str:
-    """Функция для обратной совместимости"""
-    return config_manager.get_current_llm_name()
-
-def get_current_llm_config() -> Dict[str, Any]:
-    """Функция для обратной совместимости"""
-    return config_manager.get_current_llm_config()
-
-def get_available_llms() -> List[str]:
-    """Функция для обратной совместимости"""
-    return config_manager.get_available_llms()
 
 def run_configuration_dialog() -> None:
     """Запуск интерактивной настройки"""

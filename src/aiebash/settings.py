@@ -1,32 +1,18 @@
+import json
 from pathlib import Path
 import os
 import shutil
 from typing import Dict, Any, Optional
 from platformdirs import user_config_dir
 
-# Импорт TOML библиотек
-try:
-    import tomllib  # Python 3.11+
-except ImportError:
-    import tomli as tomllib  # Python < 3.11
-
-try:
-    import tomllib as toml_writer
-except ImportError:
-    try:
-        import tomli_w as toml_writer
-    except ImportError:
-        # Fallback - будем использовать простую запись
-        toml_writer = None
-
 
 # --- Пути к конфигурации ---
 APP_NAME = "ai-ebash"
-# Путь к конфигу пользователя (e.g., %APPDATA%\ai-ebash\config.toml)
+# Путь к конфигу пользователя (e.g., %APPDATA%\ai-ebash\config.json)
 USER_CONFIG_DIR = Path(user_config_dir(APP_NAME))
-USER_CONFIG_PATH = USER_CONFIG_DIR / "config.toml"
+USER_CONFIG_PATH = USER_CONFIG_DIR / "config.json"
 # Путь к дефолтному конфигу
-DEFAULT_CONFIG_PATH = Path(__file__).parent / "default_config.toml"
+DEFAULT_CONFIG_PATH = Path(__file__).parent / "default_config.json"
 
 class Settings:
     """Класс для работы с настройками приложения"""
@@ -51,8 +37,8 @@ class Settings:
         
         # Загружаем настройки из файла
         try:
-            with open(USER_CONFIG_PATH, 'rb') as f:
-                self.config_data = tomllib.load(f)
+            with open(USER_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                self.config_data = json.load(f)
         except Exception:
             self.config_data = {}
             
@@ -63,26 +49,9 @@ class Settings:
             USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
             with open(USER_CONFIG_PATH, 'w', encoding='utf-8') as f:
-                self._write_toml(f, self.config_data)
+                json.dump(self.config_data, f, indent=2, ensure_ascii=False)
         except Exception:
             pass
-
-    def _write_toml(self, file, data: Dict[str, Any], prefix: str = "") -> None:
-        """Простая функция записи TOML (fallback если tomli_w недоступен)"""
-        for key, value in data.items():
-            if isinstance(value, dict):
-                if prefix:
-                    file.write(f"\n[{prefix}.{key}]\n")
-                else:
-                    file.write(f"\n[{key}]\n")
-                self._write_toml(file, value, key if not prefix else f"{prefix}.{key}")
-            else:
-                if isinstance(value, str):
-                    file.write(f'{key} = "{value}"\n')
-                elif isinstance(value, bool):
-                    file.write(f'{key} = {str(value).lower()}\n')
-                else:
-                    file.write(f'{key} = {value}\n')
             
     def get_value(self, section: str, key: str, default: Any = None) -> Any:
         """Получает значение из настроек"""

@@ -1,2 +1,8 @@
 from setuptools import setup
-setup()
+setup(
+    options={
+        'package_data': {
+            'aiebash': ['*.json'],
+        },
+    },
+)

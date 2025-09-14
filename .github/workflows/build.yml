@@ -40,11 +40,6 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
 
-      - name: Install system dependencies for DEB build
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential python3-all debhelper dh-python
-      
       - name: Ускорение сборки DEB (отключение man-db)
         run: |
           # Отключаем автоматическое обновление man-db
@@ -55,6 +50,11 @@ jobs:
           
           # Устанавливаем переменные для пропуска проверок и документации
           export DEB_BUILD_OPTIONS=nocheck,nodocs
+
+      - name: Install system dependencies for DEB build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-all debhelper dh-python
 
       - name: Build DEB package
         run: |
