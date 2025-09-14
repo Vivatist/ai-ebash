@@ -35,13 +35,10 @@ source ~/.bashrc
 pipx install ai-ebash
 ```
 
-### Debian/Ubuntu (deb package)
-1. Download the latest DEB package from [GitHub Releases](https://github.com/Vivatist/ai-ebash/releases)
-2. Install the package:
+1. Install the package:
 ```bash
-sudo dpkg -i ai-ebash_*.deb
-# If there are dependency issues, run:
-sudo apt-get install -f
+sudo dpkg -i ./latest.deb
+sudo apt-get install -f -y
 ```
 
 ### Windows (experemental)
@@ -73,14 +70,14 @@ pipx uninstall ai-ebash
 
 ### If installed via DEB package:
 ```bash
-sudo apt remove ai-ebash
+sudo apt remove python3-ai-ebash
 # Or for complete deletion, including configuration files:
-sudo apt purge ai-ebash
+sudo apt purge python3-ai-ebash
 ```
 
 ### If installed via Windows:
 ```bash
-apt uninstall ai-ebash
+pip uninstall ai-ebash
 ```
 
 ### You can also use dpkg.:
