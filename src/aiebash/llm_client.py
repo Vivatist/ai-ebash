@@ -1,66 +1,95 @@
+"""
+Клиент для работы с LLM API через OpenRouter.
+
+Поддерживает:
+- Обычный режим запросов с ожиданием полного ответа
+- Потоковый режим с отображением ответа в реальном времени
+- Ленивую загрузку зависимостей для быстрого старта
+- Markdown-форматирование ответов через Rich
+"""
 import threading
-from typing import List, Dict
+from typing import List, Dict, Optional
 import time
 from aiebash.formatter_text import format_api_key_display
 from aiebash.i18n import t
 from aiebash.logger import log_execution_time
 from aiebash.config_manager import config
 
-# Ленивый импорт Rich
-_console = None
-_markdown = None
-_live = None
+class _LazyImports:
+    """Класс для ленивого импорта тяжелых зависимостей."""
+    
+    def __init__(self):
+        self._console = None
+        self._markdown = None
+        self._live = None
+        self._openai_client = None
+    
+    def get_console(self):
+        """Возвращает экземпляр Rich Console."""
+        if self._console is None:
+            from rich.console import Console
+            self._console = Console()
+        return self._console
+    
+    def get_markdown(self):
+        """Возвращает класс Rich Markdown."""
+        if self._markdown is None:
+            from rich.markdown import Markdown
+            self._markdown = Markdown
+        return self._markdown
+    
+    def get_live(self):
+        """Возвращает класс Rich Live."""
+        if self._live is None:
+            from rich.live import Live
+            self._live = Live
+        return self._live
+    
+    def get_openai_client(self):
+        """Возвращает класс OpenAI клиента."""
+        if self._openai_client is None:
+            from openai import OpenAI
+            self._openai_client = OpenAI
+        return self._openai_client
 
-def _get_console():
-    global _console
-    if _console is None:
-        from rich.console import Console
-        _console = Console()
-    return _console
 
-def _get_markdown():
-    global _markdown
-    if _markdown is None:
-        from rich.markdown import Markdown
-        _markdown = Markdown
-    return _markdown
-
-def _get_live():
-    global _live
-    if _live is None:
-        from rich.live import Live
-        _live = Live
-    return _live
-
-# Ленивый импорт OpenAI (самый тяжелый модуль)
-_openai_client = None
-
-
-def _get_openai_client():
-    """Ленивый импорт OpenAI клиента"""
-    global _openai_client
-    if _openai_client is None:
-        from openai import OpenAI
-        _openai_client = OpenAI
-    return _openai_client
+# Глобальный экземпляр для ленивых импортов
+_imports = _LazyImports()
 
 
 class OpenRouterClient:
+    """Клиент для взаимодействия с LLM API через OpenRouter."""
+    
+    DEFAULT_TEMPERATURE = 0.7
+    SPINNER_SLEEP_INTERVAL = 0.1
 
     def _spinner(self, stop_spinner: threading.Event) -> None:
-        """Визуальный индикатор работы ИИ с точечным спиннером.
-        Пока stop_event не установлен, показывает "Аи печатает...".
+        """Показывает спиннер во время ожидания ответа от AI.
+        
+        Args:
+            stop_spinner: Event для остановки спиннера
         """
-        console = _get_console()
-        with console.status("[dim]" + t('Ai thinking...') + "[/dim]", spinner="dots", spinner_style="dim"):
+        console = _imports.get_console()
+        status_text = "[dim]" + t('Ai thinking...') + "[/dim]"
+        
+        with console.status(status_text, spinner="dots", spinner_style="dim"):
             while not stop_spinner.is_set():
-                time.sleep(0.1)
-        # console.print("[green]Ai: [/green]")
+                time.sleep(self.SPINNER_SLEEP_INTERVAL)
 
     @log_execution_time
     def __init__(self, console, logger, api_key: str, api_url: str, model: str,
-                 system_content: str,
-                 temperature: float = 0.7):
+                 system_content: str, temperature: float = DEFAULT_TEMPERATURE):
+        """Инициализирует клиент OpenRouter.
+        
+        Args:
+            console: Rich консоль для вывода
+            logger: Логгер для записи событий
+            api_key: API ключ для авторизации
+            api_url: URL API эндпоинта
+            model: Название модели для использования
+            system_content: Системное сообщение для контекста
+            temperature: Параметр креативности модели (0.0-1.0)
+        """
         self.console = console
         self.logger = logger
         self.api_key = api_key
@@ -74,112 +103,159 @@ class OpenRouterClient:
 
     @property
     def client(self):
-        """Ленивая инициализация OpenAI клиента"""
+        """Ленивая инициализация OpenAI клиента.
+        
+        Returns:
+            Экземпляр OpenAI клиента
+        """
         if self._client is None:
-            self._client = _get_openai_client()(api_key=self.api_key, base_url=self.api_url)
+            openai_class = _imports.get_openai_client()
+            self._client = openai_class(api_key=self.api_key, base_url=self.api_url)
         return self._client
 
     @log_execution_time
-    def ask(self, user_input: str, educational_content: list = None) -> str:
-        """Обычный (не потоковый) режим с сохранением контекста"""
+    def ask(self, user_input: str, educational_content: Optional[List[Dict[str, str]]] = None) -> str:
+        """Отправляет запрос в обычном режиме и возвращает полный ответ.
+        
+        Args:
+            user_input: Текст запроса пользователя
+            educational_content: Дополнительные сообщения для контекста
+            
+        Returns:
+            Полный ответ от AI модели
+        """
         if educational_content is None:
             educational_content = []
-        self.messages.extend(educational_content)
-        self.messages.append({"role": "user", "content": user_input})
-
+            
+        self._add_messages_to_context(educational_content, user_input)
+        
         # Показ спиннера в отдельном потоке
         stop_spinner = threading.Event()
         spinner_thread = threading.Thread(target=self._spinner, args=(stop_spinner,))
         spinner_thread.start()
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=self.messages,
-                temperature=self.temperature
-            )
-
+            response = self._make_api_request()
             reply = response.choices[0].message.content
 
             # Останавливаем спиннер
             stop_spinner.set()
             spinner_thread.join()
 
-
             self.messages.append({"role": "assistant", "content": reply})
-
             return reply
 
-        except Exception as e:
+        except Exception:
             # Останавливаем спиннер
             stop_spinner.set()
             spinner_thread.join()
             raise
 
-
-    @log_execution_time
-    def ask_stream(self, user_input: str, educational_content: list = None) -> str:
-        """Потоковый режим с сохранением контекста и обработкой Markdown в реальном времени"""
-        if educational_content is None:
-            educational_content = []
+    def _add_messages_to_context(self, educational_content: List[Dict[str, str]], user_input: str) -> None:
+        """Добавляет сообщения в контекст разговора."""
         self.messages.extend(educational_content)
         self.messages.append({"role": "user", "content": user_input})
+
+    def _make_api_request(self):
+        """Выполняет API запрос к модели."""
+        return self.client.chat.completions.create(
+            model=self.model,
+            messages=self.messages,
+            temperature=self.temperature
+        )
+
+
+    @log_execution_time
+    def ask_stream(self, user_input: str, educational_content: Optional[List[Dict[str, str]]] = None) -> str:
+        """Отправляет запрос в потоковом режиме с отображением ответа в реальном времени.
+        
+        Args:
+            user_input: Текст запроса пользователя
+            educational_content: Дополнительные сообщения для контекста
+            
+        Returns:
+            Полный ответ от AI модели
+        """
+        if educational_content is None:
+            educational_content = []
+            
+        self._add_messages_to_context(educational_content, user_input)
         reply_parts = []
+        
         # Показ спиннера в отдельном потоке
         stop_spinner = threading.Event()
         spinner_thread = threading.Thread(target=self._spinner, args=(stop_spinner,))
         spinner_thread.start()
         
         try:
-            stream = self.client.chat.completions.create(
-                model=self.model,
-                messages=self.messages,
-                temperature=self.temperature,
-                stream=True
-            )
-
-            # Ждем первый чанк с контентом перед запуском Live
-            first_content_chunk = None
-            for chunk in stream:
-                if chunk.choices[0].delta.content:
-                    first_content_chunk = chunk.choices[0].delta.content
-                    reply_parts.append(first_content_chunk)
-                    break
+            stream = self._make_streaming_api_request()
+            first_chunk = self._get_first_content_chunk(stream, reply_parts)
             
             # Останавливаем спиннер после получения первого чанка
             stop_spinner.set()
             if spinner_thread.is_alive():
                 spinner_thread.join()
 
-            sleep_time = config.get("global", "sleep_time", 0.01)
-            refresh_per_second = config.get("global", "refresh_per_second", 10)
-            # Используем Live для динамического обновления отображения с Markdown
-            with _get_live()(console=self.console, refresh_per_second=refresh_per_second, auto_refresh=True) as live:
-                # Показываем первый чанк
-                if first_content_chunk:
-                    markdown = _get_markdown()(first_content_chunk)
-                    live.update(markdown)
+            if first_chunk:
+                self._process_streaming_response(stream, reply_parts, first_chunk)
                 
-                # Продолжаем обрабатывать остальные чанки
-                for chunk in stream:
-                    if chunk.choices[0].delta.content:
-                        text = chunk.choices[0].delta.content
-                        reply_parts.append(text)
-                        # Объединяем все части и обрабатываем как Markdown
-                        full_text = "".join(reply_parts)
-                        markdown = _get_markdown()(full_text)
-                        live.update(markdown)
-                        time.sleep(sleep_time)  # Небольшая задержка для плавности обновления
             reply = "".join(reply_parts)
             self.messages.append({"role": "assistant", "content": reply})
             return reply
 
-        except Exception as e:
+        except Exception:
             # Останавливаем спиннер в случае ошибки
             stop_spinner.set()
             if spinner_thread.is_alive():
                 spinner_thread.join()
             raise
+
+    def _make_streaming_api_request(self):
+        """Выполняет потоковый API запрос."""
+        return self.client.chat.completions.create(
+            model=self.model,
+            messages=self.messages,
+            temperature=self.temperature,
+            stream=True
+        )
+
+    def _get_first_content_chunk(self, stream, reply_parts: List[str]) -> Optional[str]:
+        """Получает первый чанк с контентом из потока."""
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                first_chunk = chunk.choices[0].delta.content
+                reply_parts.append(first_chunk)
+                return first_chunk
+        return None
+
+    def _process_streaming_response(self, stream, reply_parts: List[str], first_chunk: str) -> None:
+        """Обрабатывает потоковый ответ с отображением через Rich Live."""
+        sleep_time = config.get("global", "sleep_time", 0.01)
+        live_class = _imports.get_live()
+        markdown_class = _imports.get_markdown()
+        
+        with live_class(
+            console=self.console,
+            auto_refresh=False,
+            refresh_per_second=1
+        ) as live:
+            # Показываем первый чанк
+            if first_chunk:
+                markdown = markdown_class(first_chunk)
+                live.update(markdown)
+                live.refresh()
+            
+            # Обрабатываем остальные чанки
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    text = chunk.choices[0].delta.content
+                    reply_parts.append(text)
+                    
+                    full_text = "".join(reply_parts)
+                    markdown = markdown_class(full_text)
+                    live.update(markdown)
+                    live.refresh()
+                    time.sleep(sleep_time)
   
 
 
