@@ -43,6 +43,34 @@ from platformdirs import user_config_dir
 from aiebash.i18n import detect_system_language
 
 
+class ConfigError(Exception):
+    """Исключение для ошибок конфигурации."""
+    pass
+
+
+class ConfigSections:
+    """Константы для разделов конфигурации."""
+    GLOBAL = "global"
+    LOGGING = "logging"
+    SUPPORTED_LLMS = "supported_LLMs"
+
+
+class GlobalKeys:
+    """Константы для ключей глобального раздела."""
+    CURRENT_LLM = "current_LLM"
+    USER_CONTENT = "user_content"
+    TEMPERATURE = "temperature"
+    STREAM_OUTPUT_MODE = "stream_output_mode"
+    JSON_MODE = "json_mode"
+
+
+class LoggingKeys:
+    """Константы для ключей раздела логирования."""
+    CONSOLE_LEVEL = "console_level"
+    FILE_ENABLED = "file_enabled"
+    FILE_LEVEL = "file_level"
+
+
 class ConfigManager:
     """
     Менеджер конфигурации для управления настройками приложения.
@@ -103,19 +131,47 @@ class ConfigManager:
 
         Returns:
             Dict[str, Any]: Загруженная конфигурация
+        
+        Raises:
+            ConfigError: При критических ошибках загрузки
         """
         try:
             with open(self.user_config_path, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f) or {}
+                config_data = yaml.safe_load(f)
+                if config_data is None:
+                    return {}
+                if not isinstance(config_data, dict):
+                    raise ConfigError(f"Неверный формат конфигурации: ожидался словарь, получен {type(config_data)}")
+                return config_data
+        except FileNotFoundError:
+            print(f"⚠️  Файл конфигурации не найден: {self.user_config_path}")
+            return {}
+        except yaml.YAMLError as e:
+            raise ConfigError(f"Ошибка парсинга YAML: {e}")
         except Exception as e:
             print(f"⚠️  Ошибка загрузки конфигурации: {e}")
             return {}
 
     def _save_config(self) -> None:
         """
-        Сохраняет текущую конфигурацию в YAML файл.
+        Сохраняет текущую конфигурацию в YAML файл с созданием резервной копии.
+        
+        Raises:
+            ConfigError: При ошибке сохранения
         """
+        # Создаем резервную копию перед сохранением
+        backup_path = self.user_config_path.with_suffix('.yaml.backup')
+        if self.user_config_path.exists():
+            try:
+                shutil.copy2(self.user_config_path, backup_path)
+            except Exception as e:
+                print(f"⚠️  Не удалось создать резервную копию: {e}")
+        
         try:
+            # Проверяем валидность данных перед сохранением
+            if not isinstance(self._config, dict):
+                raise ConfigError("Конфигурация должна быть словарем")
+            
             with open(self.user_config_path, 'w', encoding='utf-8') as f:
                 yaml.safe_dump(
                     self._config,
@@ -126,7 +182,14 @@ class ConfigManager:
                     sort_keys=False
                 )
         except Exception as e:
-            raise RuntimeError(f"Не удалось сохранить конфигурацию: {e}")
+            # Восстанавливаем из резервной копии при ошибке
+            if backup_path.exists():
+                try:
+                    shutil.copy2(backup_path, self.user_config_path)
+                    print(f"🔄 Конфигурация восстановлена из резервной копии")
+                except Exception:
+                    pass
+            raise ConfigError(f"Не удалось сохранить конфигурацию: {e}")
 
     def reload(self) -> None:
         """
@@ -161,16 +224,29 @@ class ConfigManager:
 
     def set(self, section: str, key: str, value: Any) -> None:
         """
-        Устанавливает значение в конфигурации.
+        Устанавливает значение в конфигурации с валидацией.
 
         Args:
             section: Секция конфигурации
             key: Ключ в секции
             value: Новое значение
+        
+        Raises:
+            ConfigError: При неверных параметрах
         """
+        if not isinstance(section, str) or not section.strip():
+            raise ConfigError("Секция должна быть непустой строкой")
+        if not isinstance(key, str) or not key.strip():
+            raise ConfigError("Ключ должен быть непустой строкой")
+        
         if section not in self._config:
             self._config[section] = {}
-
+        
+        # Валидация для специфических ключей
+        if section == ConfigSections.GLOBAL and key == GlobalKeys.TEMPERATURE:
+            if not isinstance(value, (int, float)) or not (0 <= value <= 2):
+                raise ConfigError("Температура должна быть числом от 0 до 2")
+        
         self._config[section][key] = value
         self._save_config()
 
@@ -402,6 +478,71 @@ class ConfigManager:
         """Путь к файлу с настройками по умолчанию."""
         return self._default_config_path
 
+    def validate_config(self) -> List[str]:
+        """
+        Проверяет конфигурацию на корректность.
+        
+        Returns:
+            List[str]: Список найденных проблем (пустой если все ОК)
+        """
+        issues = []
+        
+        # Проверяем температуру
+        temp = self.get(ConfigSections.GLOBAL, GlobalKeys.TEMPERATURE, 0.2)
+        if not isinstance(temp, (int, float)) or not (0 <= temp <= 2):
+            issues.append(f"Некорректная температура: {temp}")
+        
+        # Проверяем текущую LLM
+        current_llm = self.get(ConfigSections.GLOBAL, GlobalKeys.CURRENT_LLM)
+        if current_llm:
+            available_llms = self.get_available_llms()
+            if current_llm not in available_llms:
+                issues.append(f"Текущая LLM '{current_llm}' не найдена в доступных")
+        
+        return issues
+    
+    def get_config_info(self) -> Dict[str, Any]:
+        """
+        Возвращает информацию о конфигурации.
+        
+        Returns:
+            Dict[str, Any]: Информация о конфигурации
+        """
+        return {
+            "config_path": str(self.user_config_path),
+            "default_config_path": str(self._default_config_path),
+            "config_exists": self.user_config_path.exists(),
+            "default_exists": self._default_config_path.exists(),
+            "config_size": self.user_config_path.stat().st_size if self.user_config_path.exists() else 0,
+            "available_llms": len(self.get_available_llms()),
+            "current_llm": self.current_llm,
+            "validation_issues": self.validate_config()
+        }
+    
+    def backup_config(self, backup_name: Optional[str] = None) -> Path:
+        """
+        Создает именованную резервную копию конфигурации.
+        
+        Args:
+            backup_name: Имя для резервной копии (по умолчанию с timestamp)
+        
+        Returns:
+            Path: Путь к созданной резервной копии
+        """
+        if backup_name is None:
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_name = f"config_backup_{timestamp}.yaml"
+        
+        backup_path = self.user_config_dir / backup_name
+        
+        if self.user_config_path.exists():
+            shutil.copy2(self.user_config_path, backup_path)
+        else:
+            raise ConfigError("Файл конфигурации не существует")
+        
+        return backup_path
+    
     def __repr__(self) -> str:
         return f"ConfigManager(app_name='{self.app_name}', config_path='{self.user_config_path}')"
 

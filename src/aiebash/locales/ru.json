@@ -108,5 +108,40 @@
   "Please enter a value between 1 and 60": "Пожалуйста, введите значение от 1 до 60",
   "Enter a value between 1 and 60.": "Введите значение от 1 до 60.",
   "Please enter a valid number": "Пожалуйста, введите корректное число",
-  "Please enter a valid integer": "Пожалуйста, введите корректное целое число"
+  "Please enter a valid integer": "Пожалуйста, введите корректное целое число",
+
+  "System Information:": "Информация о системе:",
+  "Operating System": "Операционная система",
+  "Architecture": "Архитектура",
+  "Processor": "Процессор",
+  "User": "Пользователь",
+  "Home Directory": "Домашняя папка",
+  "Current Directory": "Текущий каталог",
+  "Hostname": "Имя хоста",
+  "Local IP Address": "Локальный IP-адрес",
+  "Python Version": "Версия Python",
+  "Current Time": "Текущее время",
+  "Timezone": "Часовой пояс",
+  "Shell": "Командная оболочка",
+  "Shell Executable": "Исполняемый файл оболочки",
+  "Shell Type": "Тип оболочки",
+
+  "Windows Command Line": "Командная строка Windows",
+  "Windows PowerShell": "Windows PowerShell",
+  "PowerShell Core": "PowerShell Core",
+  "Bash shell": "Оболочка Bash",
+  "Z shell": "Оболочка Zsh",
+  "Fish shell": "Оболочка Fish",
+  "C shell": "Оболочка C shell",
+  "TCSH shell": "Оболочка TCSH",
+  "Korn shell": "Оболочка Korn",
+  "Debian Almquist shell": "Оболочка Debian Almquist",
+
+  "unknown": "неизвестно",
+  "unknown shell type": "неизвестный тип оболочки",
+  "unavailable (error: {error})": "недоступно (ошибка: {error})",
+
+  "System information unavailable due to error: {error}": "Информация о системе недоступна из-за ошибки: {error}",
+  "Failed to collect system information": "Не удалось собрать информацию о системе",
+  "Unsupported output format: {format}": "Неподдерживаемый формат вывода: {format}"
 }

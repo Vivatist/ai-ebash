@@ -84,3 +84,17 @@ def detect_system_language(supported: Optional[list[str]] = None) -> str:
     if supported:
         return code if code in supported else supported[0]
     return code
+
+
+def init_system_info_translations() -> None:
+    """Инициализирует переводы для модуля sys_info в существующую систему."""
+    # Автоматически определяем язык системы
+    detected_lang = detect_system_language(['en', 'ru', 'de', 'fr', 'es'])
+    
+    # Устанавливаем язык если он поддерживается
+    if detected_lang != 'en':
+        translator.set_language(detected_lang)
+
+
+# Инициализируем переводы при импорте модуля
+init_system_info_translations()
